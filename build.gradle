@@ -12,12 +12,13 @@ apply plugin: 'java'
 // Apply the application plugin to add support for building an application
 apply plugin: 'application'
 
-project.ext.set("artifactory_app_username", "insertyourusername")
-project.ext.set("artifactory_app_password","insertyourpasswordhash")
-project.ext.set("artifactory_app_key", "insertyourkey")
-
 applicationDefaultJvmArgs = ["-noverify"]
 buildscript {
+    ext {
+        artifactory_app_username = "insertyourusername"
+        artifactory_app_password = "insertyourpasswordhash"
+        artifactory_app_key = "insertyourkey"
+    }
     repositories {
         maven {
             url "http://research.rightmesh.io/artifactory/libs-local"
@@ -52,7 +53,6 @@ dependencies {
     // This dependency is found on compile classpath of this component and consumers.
     compile 'com.google.guava:guava:23.0'
     compile ('io.left.rightmesh:rightmesh-java-library:0.4.0')
-    
     // Use JUnit test framework
     testCompile 'junit:junit:4.12'
 }
