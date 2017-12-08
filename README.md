@@ -23,3 +23,7 @@ function, however, developers will be able to determine the MeshID of
 their superpeer(s) and use those to let the Mesh determine the best way
 to reach the superpeer(s).
 
+Don't forget when you clone the repo to update your credentials from 
+[https://developer.rightmesh.io] in the [build.gradle](build.gradle) 
+file.
+
