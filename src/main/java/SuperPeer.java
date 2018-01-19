@@ -7,9 +7,10 @@ import io.left.rightmesh.mesh.MeshManager;
 
 import java.io.Console;
  
-public class SuperPeer {
+public class SuperPeer implements Transactionlistener {
     public static void main(String[] args) {
         JavaMeshManager mm = new JavaMeshManager(true);
+        mm.on();
         System.out.println("Superpeer MeshID: " + mm.getUuid());
         
         //Continue to run until user quits
@@ -28,4 +29,10 @@ public class SuperPeer {
         
         mm.stop();
     }
+    
+    public void handleTransactionPacket() {
+            MeshUtility.Log(TAG, "TRANSACTION READY TO ROCK");
+    }
+    
+    
 }
