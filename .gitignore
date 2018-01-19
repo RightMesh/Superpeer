@@ -1,6 +1,9 @@
 .gradle
 /build/
 
+#license
+src/main/assets/
+
 # Ignore Gradle GUI config
 gradle-app.setting
 
