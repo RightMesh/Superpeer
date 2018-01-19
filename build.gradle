@@ -46,7 +46,7 @@ buildscript {
         }
     }
     dependencies {
-        classpath 'io.left.rightmesh:rightmesh-plugin:1.4-SNAPSHOT'
+        classpath 'io.left.rightmesh:rightmesh-plugin:1.4'
         classpath 'com.palominolabs.gradle.task:gradle-git-clone-task:0.0.2'
         classpath 'com.bmuschko:gradle-vagrant-plugin:2.1'
     }
@@ -83,7 +83,7 @@ task cloneParity(type: com.palominolabs.gradle.task.git.clone.GitCloneTask) {
 task cloneStatus {
     doLast {
         if (cloneParity.state.failure != null) {
-            //here is what shoud be executed if cloneParity fails
+            //here is what should be executed if cloneParity fails
             println 'Failed to use ssh to connect to gitlab. Setup your ssh key and test with ssh -T git@github.com'
         }
     }
@@ -97,7 +97,7 @@ task startParity(type: VagrantUp) {
 }
 
 // stops and destroys the vagrant VM for parity
-task destroyParity(type:VagrantDestroy ) {
+task destroyParity(type: VagrantDestroy ) {
     description = 'Destroys VM machine running on VirtualBox.'
     group = 'VirtualBox VM'
     boxDir = virtualBoxDir
