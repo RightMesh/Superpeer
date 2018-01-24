@@ -69,7 +69,7 @@ repositories {
 dependencies {
     // This dependency is found on compile classpath of this component and consumers.
     compile 'com.google.guava:guava:23.0'
-    compile ('io.left.rightmesh:rightmesh-java-library:0.5.0-JASON-SNAPSHOT') { changing = true; }
+    compile ('io.left.rightmesh:rightmesh-java-library:0.4.1')
     // Use JUnit test framework
     testCompile 'junit:junit:4.12'
 }
@@ -123,10 +123,3 @@ cloneParity.finalizedBy cloneStatus
 
 startParity.dependsOn(cloneParity)
 compileJava.dependsOn(startParity)
-
-// for testing
-configurations.all {
-    // Check for updates every build
-    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
-}
-
