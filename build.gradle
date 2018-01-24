@@ -74,17 +74,19 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 
+//Sets the repo we will pull the parity vagrant setup from. Also specifies
+//the commit hash, or remote branch with some like 'origin/master'
 task cloneParity(type: com.palominolabs.gradle.task.git.clone.GitCloneTask) {
   dir = file("$buildDir/parity")
   uri = 'https://github.com/RightMesh/vagrant-eth-env.git'
-  treeish = 'origin/master' // a commit hash, or tag name, or branch name (with remote prefix, like 'origin/master')
+  treeish = 'c1b27375a9c11a718bdaae7aad4769e5bdd19cc9r'
 }
 
 task cloneStatus {
     doLast {
         if (cloneParity.state.failure != null) {
             //here is what should be executed if cloneParity fails
-            println 'Failed to use ssh to connect to gitlab. Setup your ssh key and test with ssh -T git@github.com'
+            println 'Failed to use ssh to connect to gitlab. Setup your ssh key and test with `ssh -T git@github.com`. More instructions at https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account/'
         }
     }
 }
