@@ -79,7 +79,7 @@ dependencies {
 task cloneParity(type: com.palominolabs.gradle.task.git.clone.GitCloneTask) {
   dir = file("$buildDir/parity")
   uri = 'https://github.com/RightMesh/vagrant-eth-env.git'
-  treeish = 'c1b27375a9c11a718bdaae7aad4769e5bdd19cc9r'
+  treeish = 'c1b27375a9c11a718bdaae7aad4769e5bdd19cc9'
 }
 
 task cloneStatus {
