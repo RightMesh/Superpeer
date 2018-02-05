@@ -125,7 +125,9 @@ task refreshParity {
 // Define the main class for the application
 mainClassName = 'SuperPeer'
 
-cloneParity.finalizedBy cloneStatus
-
-startParity.dependsOn(cloneParity)
-compileJava.dependsOn(startParity)
+// only required for local builds where we want to run the parity
+// wallet in vagrant rather than directly on machine
+//cloneParity.finalizedBy cloneStatus
+//startParity.dependsOn(cloneParity)
+//destroyParity.dependsOn(cloneParity)
+//compileJava.dependsOn(startParity)
