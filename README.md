@@ -41,3 +41,23 @@ clobber your local wallet.
 Todo: detect in gradle or use a set variable to specify whether we are
 running on a local machine or AWS instance. Also add an option to set
 a remote parity machine (if the superpeer wants to separate funciton).
+
+# Steps to run on AWS
+Install and get parity running
+`./configure.sh`
+
+Verify parity is running:
+`ps ax | grep parity`
+
+Compile against the latest library version
+`./gradlew build --refresh-dependencies`
+
+Create the binary to run the superpeer
+`./gradlew installDist`
+
+Run the superpeer
+`./build/install/Superpeer/bin/Superpeer`
+
+In your app, make sure you set the superpeer to the IP address of the AWS
+instance:
+`mm.setSuperPeer("IP");`
