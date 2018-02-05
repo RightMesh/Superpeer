@@ -44,13 +44,19 @@ buildscript {
                 password artifactory_app_password
             }
         }
+        maven {
+            //ansible plugin
+            url "https://plugins.gradle.org/m2/"
+        }
     }
     dependencies {
         classpath 'io.left.rightmesh:rightmesh-plugin:1.4'
         classpath 'com.palominolabs.gradle.task:gradle-git-clone-task:0.0.2'
         classpath 'com.bmuschko:gradle-vagrant-plugin:2.1'
+        classpath "com.teslagov.gradle:gradle-ansible-plugin:0.0.2"
     }
 }
+apply plugin: "com.teslagov.gradle-ansible-plugin"
 apply plugin: 'io.left.rightmesh.rightmesh-plugin'
 build.dependsOn("rightmesh")
 
