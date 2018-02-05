@@ -1,5 +1,8 @@
 .gradle
 /build/
+.parity
+.parity-pass
+parity.log
 
 #license
 src/main/assets/

@@ -27,3 +27,37 @@ Don't forget when you clone the repo to update your credentials from
 [https://developer.rightmesh.io] in the [build.gradle](build.gradle) 
 file.
 
+# Setting up
+If you want to run the parity client directly, run the `configure.sh`
+script. This will install parity from .deb (along with all dependencies)
+and start it up.
+
+Otherwise you can uncomment the last few lines in the 
+build.gradle script to run parity in vagrant. If you wish to run it
+in vagrant, you'll need to install vagrant and virtualbox. This will
+install the parity wallet within the vm so you don't accidentally
+clobber your local wallet.
+
+Todo: detect in gradle or use a set variable to specify whether we are
+running on a local machine or AWS instance. Also add an option to set
+a remote parity machine (if the superpeer wants to separate funciton).
+
+# Steps to run on AWS
+Install and get parity running
+`./configure.sh`
+
+Verify parity is running:
+`ps ax | grep parity`
+
+Compile against the latest library version
+`./gradlew build --refresh-dependencies`
+
+Create the binary to run the superpeer
+`./gradlew installDist`
+
+Run the superpeer
+`./build/install/Superpeer/bin/Superpeer`
+
+In your app, make sure you set the superpeer to the IP address of the AWS
+instance:
+`mm.setSuperPeer("IP");`
