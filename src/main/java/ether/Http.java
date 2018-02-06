@@ -19,27 +19,28 @@ import org.apache.http.impl.client.HttpClientBuilder;
 public class Http {
     private String rpcAddress;
     private boolean debugInfo;
+
     /**
-     *
      * @param _rpcAddress the rpc URL
-     * @param _debug debug info switch
+     * @param _debug      debug info switch
      */
     public Http(String _rpcAddress, boolean _debug) {
-        rpcAddress=_rpcAddress;
-        debugInfo=_debug;
+        rpcAddress = _rpcAddress;
+        debugInfo = _debug;
     }
 
     /**
      * This function is to send RPC request to the running peer.
+     *
      * @param requestString the HTTP request string
      * @return the result of the HTTP request
      * @throws IOException
      */
-    public Object getHttpResponse(String requestString) throws IOException{
+    public Object getHttpResponse(String requestString) throws IOException {
         JSONParser parser = new JSONParser();
         JSONObject jobj;
-        Object executionResult=null;
-        String temp="";
+        Object executionResult = null;
+        String temp = "";
         try {
             CloseableHttpClient httpClient = HttpClientBuilder.create().build();
 
@@ -51,28 +52,23 @@ public class Http {
             response.close();
             httpClient.close();
 
-            temp=new BasicResponseHandler().handleResponse(response);
-            jobj=(JSONObject)parser.parse(temp);
-            if(debugInfo) {
-                System.out.println("result = "+jobj.toJSONString());
+            temp = new BasicResponseHandler().handleResponse(response);
+            jobj = (JSONObject) parser.parse(temp);
+            if (debugInfo) {
+                System.out.println("result = " + jobj.toJSONString());
             }
             for (Object key : jobj.keySet()) {
-                if (((String)key).equalsIgnoreCase("result")) {
-                    executionResult=jobj.get(key);
+                if (((String) key).equalsIgnoreCase("result")) {
+                    executionResult = jobj.get(key);
                 }
             }
-        }catch (UnsupportedEncodingException e) {
-            System.out.println("UnsupportedEncodingException: " + e);
-        }catch (ClientProtocolException e) {
-            System.out.println("ClientProtocolException: "+ e);
-        }catch (IOException e) {
-            System.out.println("IOException: " + e);
-        }catch(ParseException e) {
-            System.out.println("ParseException: " + e);
-        }catch (NumberFormatException e){
-            System.out.println("NumberFormatException=" + e);
+        } catch (UnsupportedEncodingException | ClientProtocolException | ParseException | NumberFormatException e) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println(e.getClass().getCanonicalName() + ": " + e.getMessage());
+            }
         }
-        if("".equals(executionResult)) {
+
+        if ("".equals(executionResult)) {
             throw new IOException(temp);
         }
         return executionResult;

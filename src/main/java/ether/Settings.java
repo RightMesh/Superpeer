@@ -5,7 +5,6 @@ import org.ethereum.core.CallTransaction;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -17,8 +16,8 @@ import java.math.BigInteger;
  */
 public class Settings {
     public final static String RPC_ADDRESS;
-    public final static String CHANNEL_ADDRESS;
-    public final static String TOKEN_ADDRESS;
+    public final static String CHANNEL_CONTRACT_ADDRESS;
+    public final static String TOKEN_CONTRACT_ADDRESS;
     public final static String CHANNEL_ABI;
     public final static String TOKEN_ABI;
 
@@ -119,26 +118,25 @@ public class Settings {
                         }
                         break;
                     case "maxDepositBits":
-                        //maxDeposit = new BigInteger("2", 10).pow(Integer.parseInt(((String) jsonObject.get(key))));
                         maxDeposit = EtherUtility.decimalToBigInteger((String) jsonObject.get(key), appendingZerosForTKN);
                         if (debugInfo) {
                             System.out.println("MAX_DEPOSIT =" + maxDeposit.toString(10)); //16?
                         }
                         break;
                     case "transCheckInterval":
-                        transCheckInterval = (long)jsonObject.get(key);
+                        transCheckInterval = (long) jsonObject.get(key);
                         if (debugInfo) {
                             System.out.println("TRANS_CHECK_INTERAVAL =" + transCheckInterval);
                         }
                         break;
                     case "lengthOfIdInBytes":
-                        lengthOfIdInBytes = (int)jsonObject.get(key);
+                        lengthOfIdInBytes = (int) jsonObject.get(key);
                         if (debugInfo) {
                             System.out.println("LENGTH_OF_ID_IN_BYTES =" + transCheckInterval);
                         }
                         break;
                     case "chainId":
-                        chainId = (int)jsonObject.get(key);
+                        chainId = (int) jsonObject.get(key);
                         if (debugInfo) {
                             System.out.println("CHAIN_ID =" + chainId);
                         }
@@ -160,8 +158,8 @@ public class Settings {
 
 
         RPC_ADDRESS = rpcAddress;
-        CHANNEL_ADDRESS = channelAddr;
-        TOKEN_ADDRESS = tokenAddr;
+        CHANNEL_CONTRACT_ADDRESS = channelAddr;
+        TOKEN_CONTRACT_ADDRESS = tokenAddr;
         CHANNEL_ABI = channelABI;
         TOKEN_ABI = tokenABI;
 
