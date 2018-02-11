@@ -3,6 +3,7 @@ package ether;
 import io.left.rightmesh.id.MeshID;
 import io.left.rightmesh.mesh.JavaMeshManager;
 import io.left.rightmesh.mesh.MeshManager;
+import io.left.rightmesh.mesh.TransactionManager;
 import io.left.rightmesh.proto.MeshTransaction;
 import io.left.rightmesh.util.EtherUtility;
 import io.left.rightmesh.util.MeshUtility;
@@ -419,7 +420,7 @@ public final class TransactionsManager {
         }
 
         //Approve Channel contract to transfer tokens to the newly created payment channel.
-        String signedApproveTransaction = EtherUtility.getSignedApproveTrans(sender, Settings.MAX_DEPOSIT,
+        String signedApproveTransaction = EtherUtility.getSignedApproveTrans(sender, Settings.INIT_DEPOSIT,
                 senderNonce, Settings.TOKEN_ABI, Settings.GAS_PRICE, Settings.GAS_LIMIT,
                 Settings.CHANNEL_CONTRACT_ADDRESS, Settings.TOKEN_CONTRACT_ADDRESS, Settings.CHAIN_ID);
 
@@ -432,7 +433,7 @@ public final class TransactionsManager {
 
         boolean res;
         try {
-            res = EtherClient.approve(senderAddress, Settings.MAX_DEPOSIT, signedApproveTransaction, httpAgent);
+            res = EtherClient.approve(senderAddress, Settings.INIT_DEPOSIT, signedApproveTransaction, httpAgent);
         } catch (IOException e) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Failed to submit approve transaction. IOException: " + e.getMessage());
@@ -457,7 +458,7 @@ public final class TransactionsManager {
 
         //Create and sign open sender-->receiver channel transaction
         String signedOpenChannelTrans = EtherUtility.getSignedOpenChannelTrans(sender, recvAddress,
-                Settings.MAX_DEPOSIT, senderNonce, Settings.CHANNEL_ABI, Settings.GAS_PRICE, Settings.GAS_LIMIT,
+                Settings.INIT_DEPOSIT, senderNonce, Settings.CHANNEL_ABI, Settings.GAS_PRICE, Settings.GAS_LIMIT,
                 Settings.CHANNEL_CONTRACT_ADDRESS, Settings.CHAIN_ID);
 
         if (signedOpenChannelTrans == null || signedOpenChannelTrans == "") {
@@ -469,7 +470,7 @@ public final class TransactionsManager {
 
         //Send the signed open payment channel transaction to the Ether network.
         try {
-            channel = EtherClient.openChannel(senderAddress, recvAddress, Settings.MAX_DEPOSIT,
+            channel = EtherClient.openChannel(senderAddress, recvAddress, Settings.INIT_DEPOSIT,
                     signedOpenChannelTrans, httpAgent);
         } catch (IOException | IllegalArgumentException e) {
             if (Settings.DEBUG_INFO) {
@@ -522,14 +523,29 @@ public final class TransactionsManager {
         if(bill != null) {
             //In-Channel exist, lets try to close it.
             System.out.println(ownMeshId + " --> " + remotePeerAddress
-                    + "bill from sender found, trying to close In-Channel...");
+                    + " bill from sender found, trying to close In-Channel...");
 
             ImmutablePair<byte[], BigInteger> balanceProofSig = bill.getLeft();
             ImmutablePair<byte[], BigInteger> closingSig = bill.getRight();
 
+            //TODO: check this
             //validate the balance in both pairs (balanceProofSig and closingSig)
-            if(balanceProofSig.right.equals(closingSig.right)) {
+            //In the In-Channel both balances should be the same, as the balanceProof received from the remote peer
+            //and the ClosingSig should be generated locally.
+            if(!balanceProofSig.right.equals(closingSig.right)) {
+                if (Settings.DEBUG_INFO) {
+                    System.out.println("Error closing In-Channel: balance in BalanceProofSig not equal to balance in ClosingSig."
+                            + "This, currently could happen in the Out-Channel but not in the In-Channel.");
 
+                    System.out.println("Regenerating ClosingHashFromSender for balance: " + balanceProofSig.right);
+                }
+
+                closingSig = meshManager.getTransactionManager()
+                        .calculateNewClosingHashFromSender(balanceProofSig.right, remotePeerMeshId.getRawUuid());
+            }
+
+            //Double check the balance, should be ok now
+            if(balanceProofSig.right.equals(closingSig.right)) {
                 if(EtherClient.cooperativeCloseReceiver(ownMeshId, remotePeerAddress, closingSig.right,
                        balanceProofSig.left, closingSig.left, httpAgent)) {
                     System.out.println("Channel has been closed: " + remotePeerAddress + " --> " + ownMeshId);
@@ -538,7 +554,7 @@ public final class TransactionsManager {
                 }
             } else {
                 if (Settings.DEBUG_INFO) {
-                    System.out.println("Error: balance in BalanceProofSig not equal to balance in ClosingSig");
+                    System.out.println("Fatal Error: In-Channel balance is not equal after regenerating a new ClosingSig.");
                 }
             }
         }
@@ -556,25 +572,39 @@ public final class TransactionsManager {
 
         if(bill != null) {
             //Out-Channel exist, lets try to close it.
-            System.out.println(ownMeshId + " --> " + remotePeerAddress
-                    + "bill to receiver found, trying to close this channel...");
+            System.out.println(remotePeerAddress + " --> " + ownMeshId
+                    + " bill to receiver found, trying to close this channel...");
 
             ImmutablePair<byte[], BigInteger> balanceProofSig = bill.getLeft();
             ImmutablePair<byte[], BigInteger> closingSig = bill.getRight();
 
+            //TODO: check this
             //validate the balance in both pairs (balanceProofSig and closingSig)
-            if(balanceProofSig.right.equals(closingSig.right)) {
+            //This situation could happen in the Out-Channel,
+            // as we are waiting for the CloseSig to arrive from the remote peer.
+            if(!balanceProofSig.right.equals(closingSig.right)) {
+                if (Settings.DEBUG_INFO) {
+                    System.out.println("Error closing Out-Channel: balance in BalanceProofSig not equal to balance in ClosingSig."
+                            + "This, currently could happen in the Out-Channel.");
 
+                    System.out.println("Regenerating BalanceProof for balance: " + balanceProofSig.right);
+                }
+
+                balanceProofSig = meshManager.getTransactionManager()
+                        .calculateNewBalanceProofToReceiver(closingSig.right, remotePeerMeshId.getRawUuid());
+            }
+
+            //Double check the balance, should be ok now
+            if(balanceProofSig.right.equals(closingSig.right)) {
                 if(EtherClient.cooperativeCloseSender(ownMeshId, remotePeerAddress, closingSig.right,
                         balanceProofSig.left, closingSig.left, httpAgent)) {
-
-                    System.out.println("Channel has been closed: " + ownMeshId + " --> " + remotePeerAddress);
+                    System.out.println("Out-Channel has been closed: " + ownMeshId + " --> " + remotePeerAddress);
                 } else {
-                    System.out.println("Failed to close channel: " + ownMeshId + " --> " + remotePeerAddress);
+                    System.out.println("Failed to close Out-Channel: " + ownMeshId + " --> " + remotePeerAddress);
                 }
             } else {
                 if (Settings.DEBUG_INFO) {
-                    System.out.println("Error: balance in BalanceProofSig not equal to balance in ClosingSig");
+                    System.out.println("Fatal Error: Out-Channel balance is not equal after regenerating a new BalanceProof.");
                 }
             }
         }

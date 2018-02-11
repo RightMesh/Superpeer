@@ -178,6 +178,8 @@ public final class EtherClient {
             return null;
         }
 
+        //The response contains the Channel struct, struct is returned as an array of bytes
+        //Channel struct contains 2 members.
         String depositStr = response.substring(0, response.length() / 2);
         String openBlockStr = response.substring(response.length() / 2);
 

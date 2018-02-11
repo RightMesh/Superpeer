@@ -26,6 +26,7 @@ public class Settings {
     public final static String APPENDING_ZEROS_FOR_ETHER;
     public final static String APPENDING_ZEROS_FOR_TOKEN;
     public final static BigInteger MAX_DEPOSIT;
+    public final static BigInteger INIT_DEPOSIT;
     public final static BigInteger GAS_PRICE;
     public final static BigInteger GAS_LIMIT;
     public final static boolean DEBUG_INFO;
@@ -46,6 +47,7 @@ public class Settings {
         String appendingZerosForETH = "";
         String appendingZerosForTKN = "";
         BigInteger maxDeposit = null;
+        BigInteger initDeposit = null;
         BigInteger gasPrice = null;
         BigInteger gasLimit = null;
         boolean debugInfo = false;
@@ -113,6 +115,12 @@ public class Settings {
                             System.out.println("MAX_DEPOSIT =" + maxDeposit.toString(10)); //16?
                         }
                         break;
+                    case "initDeposit":
+                        initDeposit = EtherUtility.decimalToBigInteger((String) jsonObject.get(key), appendingZerosForTKN);
+                        if (debugInfo) {
+                            System.out.println("INIT_DEPOSIT =" + initDeposit.toString(10));
+                        }
+                        break;
                     case "transCheckInterval":
                         transCheckInterval = (long) jsonObject.get(key);
                         if (debugInfo) {
@@ -158,6 +166,7 @@ public class Settings {
         APPENDING_ZEROS_FOR_ETHER = appendingZerosForETH;
         APPENDING_ZEROS_FOR_TOKEN = appendingZerosForTKN;
         MAX_DEPOSIT = maxDeposit;
+        INIT_DEPOSIT = initDeposit;
         GAS_PRICE = gasPrice;
         GAS_LIMIT = gasLimit;
         DEBUG_INFO = debugInfo;
