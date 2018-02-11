@@ -36,8 +36,8 @@ public class Settings {
 
     static {
         String rpcAddress = "";
-        String channelAddr = "";
-        String tokenAddr = "";
+        String channelContractAddr = "";
+        String tokenContractAddr = "";
         String channelABI = "";
         String tokenABI = "";
 
@@ -57,8 +57,10 @@ public class Settings {
         JSONParser parser = new JSONParser();
         try {
             Object obj = parser.parse(new FileReader("rm-ethereum.conf"));
-
             JSONObject jsonObject = (JSONObject) obj;
+            appendingZerosForETH = ((String) jsonObject.get("appendingZerosForETH"));
+            appendingZerosForTKN = ((String) jsonObject.get("appendingZerosForTKN"));
+
             for (Object key : jsonObject.keySet()) {
                 switch ((String) key) {
                     case "debugInfo":
@@ -79,16 +81,16 @@ public class Settings {
                             System.out.println("rpcAddress = " + rpcAddress);
                         }
                         break;
-                    case "channelAddr":
-                        channelAddr = ((String) jsonObject.get(key));
+                    case "channelContractAddr":
+                        channelContractAddr = ((String) jsonObject.get(key));
                         if (debugInfo) {
-                            System.out.println("channelAddr = " + channelAddr);
+                            System.out.println("channelContractAddr = " + channelContractAddr);
                         }
                         break;
-                    case "tokenAddr":
-                        tokenAddr = ((String) jsonObject.get(key));
+                    case "tokenContractAddr":
+                        tokenContractAddr = ((String) jsonObject.get(key));
                         if (debugInfo) {
-                            System.out.println("tokenAddr = " + tokenAddr);
+                            System.out.println("tokenAddr = " + tokenContractAddr);
                         }
                         break;
                     case "channelABI":
@@ -104,18 +106,6 @@ public class Settings {
                             System.out.println("tokenABI = " + tokenABI);
                         }
                         tokenContract = new CallTransaction.Contract(tokenABI);
-                        break;
-                    case "appendingZerosForETH":
-                        appendingZerosForETH = ((String) jsonObject.get(key));
-                        if (debugInfo) {
-                            System.out.println("appendingZerosForETH = " + appendingZerosForETH);
-                        }
-                        break;
-                    case "appendingZerosForTKN":
-                        appendingZerosForTKN = ((String) jsonObject.get(key));
-                        if (debugInfo) {
-                            System.out.println("appendingZerosForTKN = " + appendingZerosForTKN);
-                        }
                         break;
                     case "maxDepositBits":
                         maxDeposit = EtherUtility.decimalToBigInteger((String) jsonObject.get(key), appendingZerosForTKN);
@@ -136,7 +126,7 @@ public class Settings {
                         }
                         break;
                     case "chainId":
-                        chainId = (int) jsonObject.get(key);
+                        chainId = Integer.parseInt(jsonObject.get(key).toString());
                         if (debugInfo) {
                             System.out.println("CHAIN_ID =" + chainId);
                         }
@@ -158,8 +148,8 @@ public class Settings {
 
 
         RPC_ADDRESS = rpcAddress;
-        CHANNEL_CONTRACT_ADDRESS = channelAddr;
-        TOKEN_CONTRACT_ADDRESS = tokenAddr;
+        CHANNEL_CONTRACT_ADDRESS = channelContractAddr;
+        TOKEN_CONTRACT_ADDRESS = tokenContractAddr;
         CHANNEL_ABI = channelABI;
         TOKEN_ABI = tokenABI;
 

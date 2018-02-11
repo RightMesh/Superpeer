@@ -2,7 +2,6 @@ package ether;
 
 import io.left.rightmesh.id.MeshID;
 import io.left.rightmesh.util.EtherUtility;
-import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
 import org.ethereum.core.CallTransaction;
 import org.ethereum.core.Transaction;
@@ -30,11 +29,11 @@ public final class EtherClient {
      * @return The nonce
      */
     public static BigInteger getNonce(String address, Http httpAgent) {
-        String queryNonceString
-                = "{\"method\":\"parity_nextNonce\",\"params\":[\"" + address + "\"],\"id\":42,\"jsonrpc\":\"2.0\"}";
+
+        String request = getEtherRequest("parity_nextNonce", address);
         String nonce;
         try {
-            nonce = (String) httpAgent.getHttpResponse(queryNonceString);
+            nonce = (String) httpAgent.getHttpResponse(request);
         } catch (IOException e) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Failed to query the nonce for: " + address);
@@ -42,25 +41,32 @@ public final class EtherClient {
             return null;
         }
 
+        if(nonce == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get response from the Ether node.");
+            }
+            return null;
+        }
+
+        nonce = nonce.substring(2);
         return new BigInteger(nonce, 16);
     }
-
 
     /**
      * Get the balance of ether on the Ethereum network.
      *
-     * @param address   the address in the Ethereum Network
-     * @param httpAgent The Http wrapper
-     * @return the Ether balance
+     * @param address                   The address in the Ethereum network.
+     * @param httpAgent                 The Http wrapper.
+     * @return                          The Ethereum balance.
+     * @throws IOException              Thrown if fails to get http response from a remote mode.
+     * @throws NumberFormatException    Thrown if fails to parse the balance.
      */
-    public static String getEtherBalance(String address, Http httpAgent) throws IOException {
+    public static BigInteger getEtherBalance(String address, Http httpAgent) throws IOException, NumberFormatException {
 
-        String queryEtherBalanceString
-                = "{\"method\":\"eth_getBalance\",\"params\":[\"" + address + "\"],\"id\":42,\"jsonrpc\":\"2.0\"}";
-        //System.out.println("The request string in getEtherBalance is "+requestString);
-        String etherBalance;
+        String request = getEtherRequest("eth_getBalance", address);
+        String weiBalanceStr;
         try {
-            etherBalance = (String) httpAgent.getHttpResponse(queryEtherBalanceString);
+            weiBalanceStr = (String) httpAgent.getHttpResponse(request);
         } catch (IOException e) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Failed to query the Ether Balance for: " + address);
@@ -68,81 +74,89 @@ public final class EtherClient {
             throw e;
         }
 
-        return etherBalance;
-    }
+        if(weiBalanceStr == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get response from the Ether node.");
+            }
+            return null;
+        }
 
+        BigInteger weiBalanceInt = new BigInteger(weiBalanceStr.substring(2), 16);
+        return weiBalanceInt;
+    }
 
     /**
      * Get the balance of Tokens on the Ethereum network.
      *
-     * @param address   the address in the Ethereum Network
-     * @param httpAgent The Http wrapper
-     * @return the Tokens balance
-     * @throws IOException
+     * @param address                   The address in the Ethereum Network.
+     * @param httpAgent                 The Http wrapper.
+     * @return                          The Ethereum balance.
+     * @throws IOException              Thrown if fails to get http response from a remote mode.
+     * @throws NumberFormatException    Thrown if fails to parse the balance.
      */
-    public static String getTokenBalance(String address, Http httpAgent) throws IOException {
-        CallTransaction.Function balanceOf = Settings.TOKEN_CONTRACT.getByName("balanceOf");
-        byte[] functionBytes = balanceOf.encode(address);
-        String requestString = "{\"method\":\"eth_call\"," +
-                "\"params\":[" +
-                "{" +
-                "\"to\":\"" + Settings.TOKEN_CONTRACT_ADDRESS + "\"," +
-                "\"data\":\"" + "0x" + new String(Hex.encodeHex(functionBytes)) + "\"" +
-                "}," +
-                "\"latest\"" +
-                "]," +
-                "\"id\":42,\"jsonrpc\":\"2.0\"}";
+    public static BigInteger getTokenBalance(String address, Http httpAgent) throws IOException, NumberFormatException {
+
+        CallTransaction.Function func = Settings.TOKEN_CONTRACT.getByName("balanceOf");
+        byte[] funcBytes = func.encode(address);
+        String funcBytesStr = "0x" + new String(Hex.encodeHex(funcBytes));
+        String request = getEtherRequest("eth_call", null, Settings.TOKEN_CONTRACT_ADDRESS,
+                null, funcBytesStr);
+
         if (Settings.DEBUG_INFO) {
-            System.out.println("Request in getTokenBalance = " + requestString);
+            System.out.println("Request in getTokenBalance = " + request);
         }
-        String tokenBalance;
+
+        String weiBalanceStr;
         try {
-            tokenBalance = (String) httpAgent.getHttpResponse(requestString);
+            weiBalanceStr = (String) httpAgent.getHttpResponse(request);
         } catch (IOException e) {
             throw e;
         }
 
-        if (Settings.DEBUG_INFO) {
-            System.out.println("Balance of "
-                    + address + " = "
-                    + new Float(new BigInteger(tokenBalance.substring(2), 16).doubleValue()
-                    / (new BigInteger(Settings.APPENDING_ZEROS_FOR_TOKEN, 10).doubleValue())).toString()
-                    + " TKN");
+        if(weiBalanceStr == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get Token balance for address: " + address);
+            }
+            return null;
         }
 
-        return tokenBalance;
+        BigInteger weiBalanceInt = new BigInteger(weiBalanceStr.substring(2), 16);
+        return weiBalanceInt;
     }
 
     /**
      * Gets the payment channel info by Sender and Receiver addresses.
      *
-     * @param senderAddress   The sender address in the Ethereum Network
-     * @param receiverAddress The receiver address in the Ethereum Network
-     * @param httpAgent       Http wrapper
-     * @return PaymentChannel object that holds all channel info.
-     * @throws DecoderException
-     * @throws IOException
+     * @param senderAddress         The sender address in the Ethereum Network
+     * @param receiverAddress       The receiver address in the Ethereum Network
+     * @param httpAgent             Http wrapper
+     * @return                      PaymentChannel object that holds all channel info.
+     * @throws IOException          Thrown if fails to get http response from a remote mode.
      */
     public static EtherUtility.PaymentChannel getChannelInfo(String senderAddress, String receiverAddress
-            , Http httpAgent) throws DecoderException, IOException {
+            , Http httpAgent) throws IOException {
 
         byte[] keyInBytes = EtherUtility.getChannelHash(senderAddress, receiverAddress);
-        if(keyInBytes == null){
+        if (keyInBytes == null) {
             if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to construct the channel Hash: "+senderAddress+"-->"+receiverAddress);
+                System.out.println("Failed to construct the channel Hash: " + senderAddress + "-->" + receiverAddress);
             }
             return null;
         }
 
-        String requestString = getEtherCallRequest("channels", keyInBytes);
+        CallTransaction.Function func = Settings.CHANNEL_CONTRACT.getByName("channels");
+        byte[] funcBytes = func.encode(keyInBytes);
+        String functionBytesStr = "0x" + new String(Hex.encodeHex(funcBytes));
+        String request = getEtherRequest("eth_call", null,
+                Settings.CHANNEL_CONTRACT_ADDRESS, null, functionBytesStr);
 
         if (Settings.DEBUG_INFO) {
-            System.out.println("Request in getChannelInfo = " + requestString);
+            System.out.println("Request in getChannelInfo = " + request);
         }
 
-        String checkChannelAvailableResult;
+        String response;
         try {
-            checkChannelAvailableResult = (String) httpAgent.getHttpResponse(requestString);
+            response = (String) httpAgent.getHttpResponse(request);
         } catch (IOException e) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Cannot checkChannelAvailable from " + senderAddress + " to " + receiverAddress);
@@ -150,42 +164,65 @@ public final class EtherClient {
             throw e;
         }
 
-        //TODO: decode channel info;
-        return new EtherUtility.PaymentChannel("0x111",
-                "0x222", Settings.MAX_DEPOSIT, 1, null, null);
+        if (response == null || response == "") {
+            return null;
+        }
+
+        if (Settings.DEBUG_INFO) {
+            System.out.println("checkChannelAvailable response: " + response);
+        }
+
+        response = response.substring(2);
+        BigInteger res = new BigInteger(response, 16);
+        if (res.equals(BigInteger.ZERO)) {
+            return null;
+        }
+
+        String depositStr = response.substring(0, response.length() / 2);
+        String openBlockStr = response.substring(response.length() / 2);
+
+        BigInteger depositInt = new BigInteger(depositStr, 16);
+        Integer openBlockInt = Integer.parseInt(openBlockStr, 16);
+
+        return new EtherUtility.PaymentChannel(senderAddress,
+                receiverAddress, depositInt, openBlockInt, new BigInteger("0"), "");
     }
 
 
     /**
      * Checks if channel exists in the Ether network by Sender and Receiver addresses.
      *
-     * @param senderAddress   The sender address in the Ethereum Network
-     * @param receiverAddress The receiver address in the Ethereum Network
-     * @param httpAgent       Http wrapper
-     * @return True if channel exists, otherwise returns False
-     * @throws DecoderException
-     * @throws IOException
+     * @param senderAddress     The sender address in the Ethereum Network
+     * @param receiverAddress   The receiver address in the Ethereum Network
+     * @param httpAgent         Http wrapper
+     * @return                  True if channel exists, otherwise returns False
+     * @throws IOException      Thrown if fails to get http response from a remote mode.
      */
     public boolean checkChannelAvailable(String senderAddress, String receiverAddress, Http httpAgent)
-            throws DecoderException, IOException {
+            throws IOException {
 
         byte[] keyInBytes = EtherUtility.getChannelHash(senderAddress, receiverAddress);
-        if(keyInBytes == null){
+        if (keyInBytes == null) {
             if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to construct the channel Hash: "+senderAddress+"-->"+receiverAddress);
+                System.out.println("Failed to construct the channel Hash: " + senderAddress + "-->" + receiverAddress);
             }
             return false;
         }
 
-        String requestString = getEtherCallRequest("channels", keyInBytes);
+
+        CallTransaction.Function func = Settings.CHANNEL_CONTRACT.getByName("channels");
+        byte[] funcBytes = func.encode(keyInBytes);
+        String funcBytesStr = "0x" + new String(Hex.encodeHex(funcBytes));
+        String request = getEtherRequest("eth_call", null,
+                Settings.CHANNEL_CONTRACT_ADDRESS, null, funcBytesStr);
 
         if (Settings.DEBUG_INFO) {
-            System.out.println("Request in getTokenBalance = " + requestString);
+            System.out.println("Request in getTokenBalance = " + request);
         }
 
-        String checkChannelAvailableResult;
+        String response;
         try {
-            checkChannelAvailableResult = (String) httpAgent.getHttpResponse(requestString);
+            response = (String) httpAgent.getHttpResponse(request);
         } catch (IOException e) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Cannot checkChannelAvailable from " + senderAddress + " to " + receiverAddress);
@@ -193,58 +230,55 @@ public final class EtherClient {
             throw e;
         }
 
+        if(response == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get response from the Ether node.");
+            }
+            return false;
+        }
+
         if (Settings.DEBUG_INFO) {
             System.out.println("There "
-                    + (new BigInteger(checkChannelAvailableResult.substring(64), 16).compareTo(BigInteger.ZERO) > 0
+                    + (new BigInteger(response.substring(64), 16).compareTo(BigInteger.ZERO) > 0
                     ? "is" : "isn't") + " a channel from " + senderAddress + " to " + receiverAddress);
         }
 
-        return (new BigInteger(checkChannelAvailableResult.substring(64), 16).compareTo(BigInteger.ZERO) > 0);
+        return (new BigInteger(response.substring(64), 16).compareTo(BigInteger.ZERO) > 0);
     }
 
 
     /**
      * Approves Payment Channels Contract to spend Tokens on behalf of the Sender.
      *
-     * @param senderAddress      The sender address in the Ethereum Network
-     * @param deposit            The approved deposit.
-     * @param signedApproveTrans The approve transaction, signed by Sender
-     * @param httpAgent          The Http wrapper
-     * @return True on success, otherwise return False.
-     * @throws NumberFormatException
-     * @throws IOException
-     * @throws IllegalArgumentException
+     * @param senderAddress                 The sender address in the Ethereum Network
+     * @param deposit                       The approved deposit.
+     * @param signedApproveTrans            The approve transaction, signed by Sender
+     * @param httpAgent                     The Http wrapper
+     * @return                              True on success, otherwise return False.
+     * @throws IOException                  Thrown if fails to get http response from a remote mode.
+     * @throws IllegalArgumentException     Thrown if supplied invalid parameter.
      */
     public static boolean approve(String senderAddress, BigInteger deposit, String signedApproveTrans, Http httpAgent)
-            throws NumberFormatException, IOException, IllegalArgumentException {
+            throws IOException, IllegalArgumentException {
 
         if (Settings.DEBUG_INFO) {
             System.out.println(senderAddress + " tries to approve channel "
                     + Settings.CHANNEL_CONTRACT_ADDRESS + " up to " + deposit + " Tokens at maximum.");
         }
 
-        //TODO: check this
-        CallTransaction.Function approve = Settings.TOKEN_CONTRACT.getByName("approve");
-        byte[] approveFunctionBytes = approve.encode(Settings.CHANNEL_CONTRACT_ADDRESS, deposit);
-
-        String queryApproveGasString = "{\"method\":\"eth_estimateGas\"," +
-                "\"params\":[" +
-                "{" +
-                "\"from\":\"" + senderAddress + "\"," +
-                "\"to\":\"" + Settings.TOKEN_CONTRACT_ADDRESS + "\"," +
-                "\"value\":\"" + "0x" + new BigInteger("0", 10).toString(16) + "\"," +
-                "\"data\":\"" + "0x" + new String(Hex.encodeHex(approveFunctionBytes)) + "\"" +
-                "}" +
-                "]," +
-                "\"id\":42,\"jsonrpc\":\"2.0\"}";
+        CallTransaction.Function func = Settings.TOKEN_CONTRACT.getByName("approve");
+        byte[] funcEncodedData = func.encode(Settings.CHANNEL_CONTRACT_ADDRESS, deposit);
+        String funcEncodedDataStr = "0x" + new String(Hex.encodeHex(funcEncodedData));
+        String request = getEtherRequest("eth_estimateGas", senderAddress,
+                Settings.TOKEN_CONTRACT_ADDRESS, "0x0", funcEncodedDataStr);
 
         if (Settings.DEBUG_INFO) {
-            System.out.println("The request string of queryApproveGasString is " + queryApproveGasString);
+            System.out.println("The request string of queryApproveGasString is " + request);
         }
 
-        String approveGasEstimateStr;
+        String gasEstimateRes;
         try {
-            approveGasEstimateStr = (String) httpAgent.getHttpResponse(queryApproveGasString);
+            gasEstimateRes = (String) httpAgent.getHttpResponse(request);
         } catch (IOException e) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Invoking function with given arguments is not allowed.");
@@ -252,16 +286,23 @@ public final class EtherClient {
             throw e;
         }
 
-        String senderNonce = getNonce(senderAddress, httpAgent).toString(); //TODO: check base, 10 or 16
-
-        if (Settings.DEBUG_INFO) {
-            System.out.println("The estimatedGas of approve is " + approveGasEstimateStr + ".");
-            System.out.println("The nonce of " + senderAddress + " is " + senderNonce);
+        if (gasEstimateRes == null || gasEstimateRes == "") {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to estimate GAS for the approve transaction. "
+                        + "Probably the spender already approved by the owner.");
+            }
+            return false;
         }
 
-        BigInteger approveGasEstimate = new BigInteger(approveGasEstimateStr); //TODO: check base, 10 or 16
+        if (Settings.DEBUG_INFO) {
+            System.out.println("The estimatedGas of approve is " + gasEstimateRes + ".");
+        }
 
-        if (approveGasEstimate.compareTo(Settings.GAS_LIMIT) > 0) {
+        gasEstimateRes = gasEstimateRes.substring(2);
+        BigInteger estimatedGas = new BigInteger(gasEstimateRes, 16);
+
+        //TODO: need to adjust the Maximum GAS limit.
+        if (estimatedGas.compareTo(Settings.GAS_LIMIT) > 0) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Estimeted GAS for approve transaction is too high. "
                         + "Probably some arguments are Invalid.");
@@ -270,13 +311,11 @@ public final class EtherClient {
                     + "Probably some arguments are Invalid.");
         }
 
-
-        String approveSendRawTransactionString = "{\"method\":\"eth_sendRawTransaction\",\"params\":[\""
-                + signedApproveTrans + "\"],\"id\":42,\"jsonrpc\":\"2.0\"}";
+        request = getEtherRequest("eth_sendRawTransaction", signedApproveTrans);
 
         String transactionId;
         try {
-            transactionId = (String) httpAgent.getHttpResponse(approveSendRawTransactionString);
+            transactionId = (String) httpAgent.getHttpResponse(request);
         } catch (IOException e) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Fail to execute HTTP request.");
@@ -284,7 +323,7 @@ public final class EtherClient {
             throw e;
         }
 
-        if (transactionId.equals("")) {
+        if (transactionId == null || transactionId.equals("")) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Fail to submit the approve transaction.");
             }
@@ -308,14 +347,14 @@ public final class EtherClient {
     /**
      * Opens Payment Channel in Ether network.
      *
-     * @param senderAddress          The sender address in the Ethereum Network
-     * @param receiverAddress        The receiver address in the Ethereum Network
-     * @param deposit                The initial deposit in the channel
-     * @param signedOpenChannelTrans The Open Channel transaction, signed by Sender
-     * @param httpAgent              The Http wrapper.
-     * @return The PaymentChannel object that holds all the information of the created channel
-     * @throws IOException
-     * @throws IllegalArgumentException
+     * @param senderAddress                 The sender address in the Ethereum Network.
+     * @param receiverAddress               The receiver address in the Ethereum Network.
+     * @param deposit                       The initial deposit in the channel.
+     * @param signedOpenChannelTrans        The Open Channel transaction, signed by Sender.
+     * @param httpAgent                     The Http wrapper.
+     * @return                              The PaymentChannel object.
+     * @throws IOException                  Thrown if fails to get http response from a remote mode.
+     * @throws IllegalArgumentException     Thrown if supplied invalid parameter.
      */
     public static EtherUtility.PaymentChannel openChannel(String senderAddress, String receiverAddress,
                                                           BigInteger deposit, String signedOpenChannelTrans,
@@ -335,26 +374,19 @@ public final class EtherClient {
             throw new IllegalArgumentException("Invalid balance provided.");
         }
 
-        CallTransaction.Function createChannelERC20 = Settings.CHANNEL_CONTRACT.getByName("createChannelERC20");
-        byte[] createChannelERC20FunctionBytes = createChannelERC20.encode(receiverAddress, deposit);
-        String queryCreatChannelGasString = "{\"method\":\"eth_estimateGas\"," +
-                "\"params\":[" +
-                "{" +
-                "\"from\":\"" + senderAddress + "\"," +
-                "\"to\":\"" + Settings.CHANNEL_CONTRACT_ADDRESS + "\"," +
-                "\"value\":\"" + "0x" + new BigInteger("0", 10).toString(16) + "\"," +
-                "\"data\":\"" + "0x" + new String(Hex.encodeHex(createChannelERC20FunctionBytes)) + "\"" +
-                "}" +
-                "]," +
-                "\"id\":42,\"jsonrpc\":\"2.0\"}";
+        CallTransaction.Function func = Settings.CHANNEL_CONTRACT.getByName("createChannelERC20");
+        byte[] funcBytes = func.encode(receiverAddress, deposit);
+        String funcEncodedDataStr = "0x" + new String(Hex.encodeHex(funcBytes));
+        String request = getEtherRequest("eth_estimateGas", senderAddress,
+                Settings.CHANNEL_CONTRACT_ADDRESS, "0x0", funcEncodedDataStr);
 
         if (Settings.DEBUG_INFO) {
-            System.out.println("The request string of queryCreatChannelGasString is " + queryCreatChannelGasString);
+            System.out.println("The request string of queryCreatChannelGasString is " + request);
         }
 
-        String openChannelGasEstimate;
+        String gasEstimateRes;
         try {
-            openChannelGasEstimate = (String) httpAgent.getHttpResponse(queryCreatChannelGasString);
+            gasEstimateRes = (String) httpAgent.getHttpResponse(request);
         } catch (IOException e) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Invoking function with given arguments is not allowed.");
@@ -362,21 +394,28 @@ public final class EtherClient {
             throw e;
         }
 
-        if (Settings.DEBUG_INFO) {
-            System.out.println("The estimatedGas of createChannelERC20 is " + openChannelGasEstimate);
+        if(gasEstimateRes == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get response from the Ether node.");
+            }
+            return null;
         }
 
-        BigInteger estimatedGas = new BigInteger(openChannelGasEstimate, 10);
+        if (Settings.DEBUG_INFO) {
+            System.out.println("The estimated Gas of createChannelERC20 is " + gasEstimateRes);
+        }
+
+        gasEstimateRes = gasEstimateRes.substring(2);
+        BigInteger estimatedGas = new BigInteger(gasEstimateRes, 16);
         if (estimatedGas.compareTo(Settings.GAS_LIMIT) > 0)
             throw new IllegalArgumentException("Exceeded GAS estimation. "
                     + "Probably invalid signed transaction provided.");
 
-        String openChannelSendRawTransactionString = "{\"method\":\"eth_sendRawTransaction\",\"params\":[\""
-                + signedOpenChannelTrans + "\"],\"id\":42,\"jsonrpc\":\"2.0\"}";
+        request = getEtherRequest("eth_sendRawTransaction", signedOpenChannelTrans);
 
         String transactionId;
         try {
-            transactionId = (String) httpAgent.getHttpResponse(openChannelSendRawTransactionString);
+            transactionId = (String) httpAgent.getHttpResponse(request);
         } catch (IOException e) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Fail to execute HTTP request.");
@@ -384,7 +423,7 @@ public final class EtherClient {
             throw e;
         }
 
-        if (transactionId.equals("")) {
+        if (transactionId == null || transactionId.equals("")) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Failed to open channel. " + senderAddress + " --> " + receiverAddress);
             }
@@ -398,294 +437,222 @@ public final class EtherClient {
                     + new BigInteger(blockNumberHex.substring(2), 16).toString(10));
         }
 
-        EtherUtility.PaymentChannel channel;
-        try {
-            channel = getChannelInfo(senderAddress, receiverAddress, httpAgent);
-        } catch (DecoderException e) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("DecoderException: " + e);
-            }
-            return null;
-        }
-
-        return channel;
+        return getChannelInfo(senderAddress, receiverAddress, httpAgent);
     }
 
 
-    //TODO: Finish
-    public static void cooperativeCloseSender(MeshID ownMeshId, String senderAddress, String receiverAddress,
-                                              byte[] balance_Msg_Hash_Sig_Sender, byte[] closing_Msg_Hash_Sig_Receiver,
-                                              String balance, String signedCooperativeCloseSenderTransParam,
-                                              Http httpAgent)
-            throws NumberFormatException, IllegalArgumentException, IOException {
+    /**
+     * Closes a payment channel by receiver.
+     *
+     * @param sigMeshId         The Receiver's MeshID.
+     * @param senderAddress     The Sender's Ether address.
+     * @param balance           The balance of the receiver.
+     * @param balanceSig        The balance signature, signed by the sender.
+     * @param closingSig        The closing signature, signed by the receiver..
+     * @param httpAgent         The http agent to send the request to the Ether node.
+     * @return                  True on success, otherwise returns False.
+     */
+    public static boolean cooperativeCloseReceiver(MeshID sigMeshId, String senderAddress, BigInteger balance,
+                                                   byte[] balanceSig, byte[] closingSig, Http httpAgent) {
 
-        BigInteger tempBalance = parseBalance(balance);
-
-        if (balance_Msg_Hash_Sig_Sender == null) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Provided balance_Msg_Hash_Sig_Sender is null.");
-            }
-            throw new IllegalArgumentException("balance_Msg_Hash_Sig_Sender cannot be null.");
-        }
-
-        if (closing_Msg_Hash_Sig_Receiver == null) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Provided closing_Msg_Hash_Sig_Receiver is null.");
-            }
-            throw new IllegalArgumentException("closing_Msg_Hash_Sig_Receiver cannot be null.");
-        }
+        byte[] balance_Msg_Hash_Sig_r = Arrays.copyOfRange(balanceSig, 0, 32);
+        byte[] balance_Msg_Hash_Sig_s = Arrays.copyOfRange(balanceSig, 32, 64);
+        byte[] balance_Msg_Hash_Sig_v = Arrays.copyOfRange(balanceSig, 64, 65);
+        byte[] closing_Msg_Hash_Sig_r = Arrays.copyOfRange(closingSig, 0, 32);
+        byte[] closing_Msg_Hash_Sig_s = Arrays.copyOfRange(closingSig, 32, 64);
+        byte[] closing_Msg_Hash_Sig_v = Arrays.copyOfRange(closingSig, 64, 65);
 
         if (Settings.DEBUG_INFO) {
-            System.out.println("The signed closingMsgHash is 0x" + Hex.encodeHexString(closing_Msg_Hash_Sig_Receiver));
-            System.out.println("The signed balanceMsgHash is 0x" + Hex.encodeHexString(balance_Msg_Hash_Sig_Sender));
+            System.out.println("Cooperative close channel by receiver: " + senderAddress + " --> " + sigMeshId
+                    + " , receiver balance = " + balance);
         }
 
-        byte[] balance_Msg_Hash_Sig_r = Arrays.copyOfRange(balance_Msg_Hash_Sig_Sender, 0, 32);
-        byte[] balance_Msg_Hash_Sig_s = Arrays.copyOfRange(balance_Msg_Hash_Sig_Sender, 32, 64);
-        byte[] balance_Msg_Hash_Sig_v = Arrays.copyOfRange(balance_Msg_Hash_Sig_Sender, 64, 65);
-
-        byte[] closing_Msg_Hash_Sig_r = Arrays.copyOfRange(closing_Msg_Hash_Sig_Receiver, 0, 32);
-        byte[] closing_Msg_Hash_Sig_s = Arrays.copyOfRange(closing_Msg_Hash_Sig_Receiver, 32, 64);
-        byte[] closing_Msg_Hash_Sig_v = Arrays.copyOfRange(closing_Msg_Hash_Sig_Receiver, 64, 65);
-
-
-        CallTransaction.Function cooperativeCloseSender = Settings.CHANNEL_CONTRACT.getByName("cooperativeCloseSender");
-        byte[] cooperativeCloseSenderFunctionBytes = cooperativeCloseSender.encode(receiverAddress,
-                tempBalance, balance_Msg_Hash_Sig_r, balance_Msg_Hash_Sig_s, new BigInteger(balance_Msg_Hash_Sig_v),
+        CallTransaction.Function func = Settings.CHANNEL_CONTRACT.getByName("cooperativeCloseReceiver");
+        byte[] funcBytes = func.encode(senderAddress, balance,
+                balance_Msg_Hash_Sig_r, balance_Msg_Hash_Sig_s, new BigInteger(balance_Msg_Hash_Sig_v),
                 closing_Msg_Hash_Sig_r, closing_Msg_Hash_Sig_s, new BigInteger(closing_Msg_Hash_Sig_v));
 
-        String querycooperativeCloseGasString = "{\"method\":\"eth_estimateGas\"," +
-                "\"params\":[" +
-                "{" +
-                "\"from\":\"" + senderAddress + "\"," +
-                "\"to\":\"" + Settings.CHANNEL_CONTRACT_ADDRESS + "\"," +
-                "\"value\":\"" + "0x" + new BigInteger("0", 10).toString(16) + "\"," +
-                "\"data\":\"" + "0x" + new String(Hex.encodeHex(cooperativeCloseSenderFunctionBytes)) + "\"" +
-                "}" +
-                "]," +
-                "\"id\":42,\"jsonrpc\":\"2.0\"}";
+        String funcBytesStr = "0x" + new String(Hex.encodeHex(funcBytes));
+        String request = getEtherRequest("eth_estimateGas", sigMeshId.toString(),
+                Settings.CHANNEL_CONTRACT_ADDRESS, "0x0", funcBytesStr);
 
         if (Settings.DEBUG_INFO) {
-            System.out.println("The request string of querycooperativeCloseGasString is "
-                    + querycooperativeCloseGasString);
+            System.out.println("The request string of queryEstimateGas is " + request);
         }
 
-        String cooperativeCloseGasEstimate;
+        String estimateGasRes;
         try {
-            cooperativeCloseGasEstimate = (String) httpAgent.getHttpResponse(querycooperativeCloseGasString);
-        } catch (IOException e) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Invoking function with given arguments is not allowed.");
-            }
-            throw e;
-        }
-        if (Settings.DEBUG_INFO) {
-            System.out.println("The estimatedGas of cooperative channel closing is "
-                    + cooperativeCloseGasEstimate + ".");
-        }
-
-
-        String signedCooperativeCloseSenderTrans = signedCooperativeCloseSenderTransParam;
-        if (signedCooperativeCloseSenderTrans == null || signedCooperativeCloseSenderTrans.isEmpty()) {
-            BigInteger senderNonce = getNonce(senderAddress, httpAgent);
-            Transaction cooperativeCloseSenderTrans = new Transaction(EtherUtility.bigIntegerToBytes(senderNonce), // nonce
-                    EtherUtility.bigIntegerToBytes(Settings.GAS_PRICE), // gas price
-                    EtherUtility.bigIntegerToBytes(new BigInteger(cooperativeCloseGasEstimate.substring(2), 16)), // gas limit
-                    ByteUtil.hexStringToBytes(Settings.CHANNEL_CONTRACT_ADDRESS), // to id
-                    EtherUtility.bigIntegerToBytes(new BigInteger("0", 10)), // value
-                    cooperativeCloseSenderFunctionBytes, Settings.CHAIN_ID);// chainid
-
-            ownMeshId.sign(cooperativeCloseSenderTrans);
-            signedCooperativeCloseSenderTrans = "0x"
-                    + new String(Hex.encodeHex(cooperativeCloseSenderTrans.getEncoded()));
-        }
-
-        String cooperativeCloseSenderRawTransString = "{\"method\":\"eth_sendRawTransaction\",\"params\":[\""
-                + signedCooperativeCloseSenderTrans + "\"],\"id\":42,\"jsonrpc\":\"2.0\"}";
-
-        String transactionId;
-        try {
-            transactionId = (String) httpAgent.getHttpResponse(cooperativeCloseSenderRawTransString);
-        } catch (IOException e) {
-            System.out.println("Fail to execute HTTP request.");
-            return;
-        }
-
-        if (!"".equals(transactionId)) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Waiting for Network to mine transactions ... ");
-            }
-            waitingForTransaction(transactionId, httpAgent);
-        }
-
-        if (Settings.DEBUG_INFO) {
-            System.out.println("\bChannel has been closed.");
-        }
-    }
-
-
-    //TODO: Finish
-    public static void cooperativeCloseReceiver(MeshID ownMeshId, String senderAddress,
-                                                String receiverAddress, byte[] balance_Msg_Hash_Sig_Sender,
-                                                byte[] closing_Msg_Hash_Sig_Receiver, String balance,
-                                                String signedCooperativeCloseReceiverTransParam, Http httpAgent)
-            throws NumberFormatException, IllegalArgumentException, IOException {
-
-        BigInteger tempBalance = parseBalance(balance);
-
-        if (balance_Msg_Hash_Sig_Sender == null) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Provided balance_Msg_Hash_Sig_Sender is null.");
-            }
-            throw new IllegalArgumentException("balance_Msg_Hash_Sig_Sender cannot be null.");
-        }
-
-        if (closing_Msg_Hash_Sig_Receiver == null) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Provided closing_Msg_Hash_Sig_Receiver is null.");
-            }
-            throw new IllegalArgumentException("closing_Msg_Hash_Sig_Receiver cannot be null.");
-        }
-
-        if (Settings.DEBUG_INFO) {
-            System.out.println("The signed closingMsgHash is 0x" + Hex.encodeHexString(closing_Msg_Hash_Sig_Receiver));
-            System.out.println("The signed balanceMsgHash is 0x" + Hex.encodeHexString(balance_Msg_Hash_Sig_Sender));
-        }
-
-        byte[] balance_Msg_Hash_Sig_r = Arrays.copyOfRange(balance_Msg_Hash_Sig_Sender, 0, 32);
-        byte[] balance_Msg_Hash_Sig_s = Arrays.copyOfRange(balance_Msg_Hash_Sig_Sender, 32, 64);
-        byte[] balance_Msg_Hash_Sig_v = Arrays.copyOfRange(balance_Msg_Hash_Sig_Sender, 64, 65);
-
-        byte[] closing_Msg_Hash_Sig_r = Arrays.copyOfRange(closing_Msg_Hash_Sig_Receiver, 0, 32);
-        byte[] closing_Msg_Hash_Sig_s = Arrays.copyOfRange(closing_Msg_Hash_Sig_Receiver, 32, 64);
-        byte[] closing_Msg_Hash_Sig_v = Arrays.copyOfRange(closing_Msg_Hash_Sig_Receiver, 64, 65);
-
-        CallTransaction.Function cooperativeCloseReceiver = Settings.CHANNEL_CONTRACT.getByName("cooperativeCloseReceiver");
-        byte[] cooperativeCloseReceiverFunctionBytes = cooperativeCloseReceiver.encode(senderAddress,
-                tempBalance, balance_Msg_Hash_Sig_r, balance_Msg_Hash_Sig_s, new BigInteger(balance_Msg_Hash_Sig_v),
-                closing_Msg_Hash_Sig_r, closing_Msg_Hash_Sig_s, new BigInteger(closing_Msg_Hash_Sig_v));
-
-        String querycooperativeCloseGasString = "{\"method\":\"eth_estimateGas\"," +
-                "\"params\":[" +
-                "{" +
-                "\"from\":\"" + receiverAddress + "\"," +
-                "\"to\":\"" + Settings.CHANNEL_CONTRACT_ADDRESS + "\"," +
-                "\"value\":\"" + "0x" + new BigInteger("0", 10).toString(16) + "\"," +
-                "\"data\":\"" + "0x" + new String(Hex.encodeHex(cooperativeCloseReceiverFunctionBytes)) + "\"" +
-                "}" +
-                "]," +
-                "\"id\":42,\"jsonrpc\":\"2.0\"}";
-
-        if (Settings.DEBUG_INFO) {
-            System.out.println("The request string of querycooperativeCloseGasString is "
-                    + querycooperativeCloseGasString);
-        }
-
-        String cooperativeCloseGasEstimate;
-        try {
-            cooperativeCloseGasEstimate = (String) httpAgent.getHttpResponse(querycooperativeCloseGasString);
+            estimateGasRes = (String) httpAgent.getHttpResponse(request);
         } catch (IOException e) {
             System.out.println("Invoking function with given arguments is not allowed.");
-            return;
+            return false;
+        }
+
+        if(estimateGasRes == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get response from the Ether node.");
+            }
+            return false;
         }
 
         if (Settings.DEBUG_INFO) {
-            System.out.println("The estimatedGas of cooperative channel closing is "
-                    + cooperativeCloseGasEstimate + ".");
+            System.out.println("The estimatedGas of cooperative channel closing is " + estimateGasRes + ".");
         }
 
-
-        String signedCooperativeCloseReceiverTrans = signedCooperativeCloseReceiverTransParam;
-        if (signedCooperativeCloseReceiverTrans == null || signedCooperativeCloseReceiverTrans.isEmpty()) {
-
-            BigInteger receiverNounce = getNonce(receiverAddress, httpAgent);
-            Transaction cooperativeCloseReceiverTrans = new Transaction(EtherUtility.bigIntegerToBytes(receiverNounce), // nonce
-                    EtherUtility.bigIntegerToBytes(Settings.GAS_PRICE), // gas price
-                    EtherUtility.bigIntegerToBytes(new BigInteger(cooperativeCloseGasEstimate.substring(2), 16)), // gas limit
-                    ByteUtil.hexStringToBytes(Settings.CHANNEL_CONTRACT_ADDRESS), // to id
-                    EtherUtility.bigIntegerToBytes(new BigInteger("0", 10)), // value
-                    cooperativeCloseReceiverFunctionBytes, 42);// chainid
-
-            ownMeshId.sign(cooperativeCloseReceiverTrans);
-            signedCooperativeCloseReceiverTrans = "0x"
-                    + new String(Hex.encodeHex(cooperativeCloseReceiverTrans.getEncoded()));
+        //Try to get nonce of the receiver
+        BigInteger recvNonce = EtherClient.getNonce(sigMeshId.toString(), httpAgent);
+        if (recvNonce == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get nonce for address: " + sigMeshId.toString());
+            }
+            return false;
         }
 
-        String cooperativeCloseReceiverRawTransactionString = "{\"method\":\"eth_sendRawTransaction\",\"params\":[\""
-                + signedCooperativeCloseReceiverTrans + "\"],\"id\":42,\"jsonrpc\":\"2.0\"}";
+        Transaction trans = new Transaction(EtherUtility.bigIntegerToBytes(recvNonce), // nonce
+                EtherUtility.bigIntegerToBytes(Settings.GAS_PRICE), // gas price
+                EtherUtility.bigIntegerToBytes(new BigInteger(estimateGasRes.substring(2), 16)), // gas limit
+                ByteUtil.hexStringToBytes(Settings.CHANNEL_CONTRACT_ADDRESS), // to id
+                EtherUtility.bigIntegerToBytes(new BigInteger("0", 10)), // value
+                funcBytes,
+                Settings.CHAIN_ID);// chainid
 
-        String transactionId;
+        sigMeshId.sign(trans);
+
+        String signedTrans = "0x" + new String(Hex.encodeHex(trans.getEncoded()));
+        request = getEtherRequest("eth_sendRawTransaction", signedTrans);
+
+        String transId;
         try {
-            transactionId = (String) httpAgent.getHttpResponse(cooperativeCloseReceiverRawTransactionString);
+            transId = (String) httpAgent.getHttpResponse(request);
         } catch (IOException e) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Fail to execute HTTP request.");
-            }
-            throw e;
+            System.out.println("Fail to execute HTTP request.");
+            return false;
         }
 
-        if (!"".equals(transactionId)) {
+        if (!"".equals(transId)) {
             if (Settings.DEBUG_INFO) {
-                System.out.println("Waiting for Network to mine transactions ... ");
+                System.out.println("Waiting for Kovan to mine transactions ... ");
             }
-            waitingForTransaction(transactionId, httpAgent);
+            waitingForTransaction(transId, httpAgent);
+        }
+
+        if(Settings.DEBUG_INFO) {
+            System.out.println("Channel has been closed: " + senderAddress + " --> " + sigMeshId);
+        }
+
+        return true;
+    }
+
+
+    /**
+     * Closes a payment channel by receiver.
+     *
+     * @param sigMeshId         The Receiver's MeshID.
+     * @param recvAddress       The Receiver's Ether address.
+     * @param balance           The balance of the receiver.
+     * @param balanceSig        The balance signature, signed by the sender.
+     * @param closingSig        The closing signature, signed by the receiver..
+     * @param httpAgent         The http agent to send the request to the Ether node.
+     * @return                  True on success, otherwise returns False.
+     */
+    public static boolean cooperativeCloseSender(MeshID sigMeshId, String recvAddress, BigInteger balance,
+                                                 byte[] balanceSig, byte[] closingSig, Http httpAgent) {
+
+        byte[] balance_Msg_Hash_Sig_r = Arrays.copyOfRange(balanceSig, 0, 32);
+        byte[] balance_Msg_Hash_Sig_s = Arrays.copyOfRange(balanceSig, 32, 64);
+        byte[] balance_Msg_Hash_Sig_v = Arrays.copyOfRange(balanceSig, 64, 65);
+        byte[] closing_Msg_Hash_Sig_r = Arrays.copyOfRange(closingSig, 0, 32);
+        byte[] closing_Msg_Hash_Sig_s = Arrays.copyOfRange(closingSig, 32, 64);
+        byte[] closing_Msg_Hash_Sig_v = Arrays.copyOfRange(closingSig, 64, 65);
+
+        if (Settings.DEBUG_INFO) {
+            System.out.println("Cooperative close channel by sender: " + sigMeshId + " --> " + recvAddress
+                    + ", receiver balance = " + balance);
+        }
+
+        CallTransaction.Function func = Settings.CHANNEL_CONTRACT.getByName("cooperativeCloseSender");
+        byte[] funcBytes = func.encode(recvAddress, balance,
+                balance_Msg_Hash_Sig_r, balance_Msg_Hash_Sig_s, new BigInteger(balance_Msg_Hash_Sig_v),
+                closing_Msg_Hash_Sig_r, closing_Msg_Hash_Sig_s, new BigInteger(closing_Msg_Hash_Sig_v));
+
+        String funcBytesStr = "0x" + new String(Hex.encodeHex(funcBytes));
+        String request = getEtherRequest("eth_estimateGas", sigMeshId.toString(),
+                Settings.CHANNEL_CONTRACT_ADDRESS, "0x0", funcBytesStr);
+
+        if (Settings.DEBUG_INFO) {
+            System.out.println("The request string of queryEstimateGas is " + request);
+        }
+
+        String estimateGasRes;
+        try {
+            estimateGasRes = (String) httpAgent.getHttpResponse(request);
+        } catch (IOException e) {
+            System.out.println("Invoking function with given arguments is not allowed.");
+            return false;
+        }
+
+        if(estimateGasRes == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get response from the Ether node.");
+            }
+            return false;
         }
 
         if (Settings.DEBUG_INFO) {
-            System.out.println("\bChannel has been closed.");
+            System.out.println("The estimatedGas of cooperative channel closing is " + estimateGasRes + ".");
         }
-    }
 
+        //Try to get nonce of the sender
+        BigInteger senderNonce = EtherClient.getNonce(sigMeshId.toString(), httpAgent);
+        if (senderNonce == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get nonce for address: " + sigMeshId.toString());
+            }
+            return false;
+        }
 
-    /**
-     * Validates the balance. The balance should not exceed the Max defined balance.
-     *
-     * @param balance The balance to validate.
-     * @return True balance is valid, otherwise returns False.
-     */
-    private static boolean validateBalance(BigInteger balance) {
-        return (Settings.MAX_DEPOSIT.compareTo(balance) > 0) ? true : false;
-    }
+        Transaction trans = new Transaction(EtherUtility.bigIntegerToBytes(senderNonce), // nonce
+                EtherUtility.bigIntegerToBytes(Settings.GAS_PRICE), // gas price
+                EtherUtility.bigIntegerToBytes(new BigInteger(estimateGasRes.substring(2), 16)), // gas limit
+                ByteUtil.hexStringToBytes(Settings.CHANNEL_CONTRACT_ADDRESS), // to id
+                EtherUtility.bigIntegerToBytes(new BigInteger("0", 10)), // value
+                funcBytes,
+                Settings.CHAIN_ID);// chainid
 
+        sigMeshId.sign(trans);
 
-    /**
-     * Parse the balance from it's String representation
-     *
-     * @param balance The balance to parse.
-     * @return Biginteger representation of the balance.
-     * @throws NumberFormatException
-     * @throws IllegalArgumentException
-     */
-    private static BigInteger parseBalance(String balance) throws NumberFormatException, IllegalArgumentException {
-        BigInteger initDeposit;
+        String signedTrans = "0x" + new String(Hex.encodeHex(trans.getEncoded()));
+        request = getEtherRequest("eth_sendRawTransaction", signedTrans);
+
+        String transId;
         try {
-            initDeposit = EtherUtility.decimalToBigInteger(balance, Settings.APPENDING_ZEROS_FOR_TOKEN);
-        } catch (NumberFormatException e) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("The provided balance is not valid.");
-            }
-            throw e;
+            transId = (String) httpAgent.getHttpResponse(request);
+        } catch (IOException e) {
+            System.out.println("Fail to execute HTTP request.");
+            return false;
         }
 
-        if (Settings.MAX_DEPOSIT.compareTo(initDeposit) < 0) {
+        if (!"".equals(transId)) {
             if (Settings.DEBUG_INFO) {
-                System.out.println("Provided deposit is larger than maximum allowed "
-                        + Settings.MAX_DEPOSIT.toString(10));
+                System.out.println("Waiting for Kovan to mine transactions ... ");
             }
-            throw new IllegalArgumentException("Provided deposit is larger than maximum allowed "
-                    + Settings.MAX_DEPOSIT.toString(10));
+            waitingForTransaction(transId, httpAgent);
         }
 
-        return initDeposit;
+        if(Settings.DEBUG_INFO) {
+            System.out.println("Channel has been closed: " + recvAddress + " --> " + sigMeshId);
+        }
+
+        return true;
     }
 
 
     /**
      * Waiting for the transaction to get mined
      *
-     * @param transacitonId The transaction id.
-     * @param httpAgent     The Http wrapper
-     * @return The block number in which the transaction was mined.
+     * @param transacitonId     The transaction id.
+     * @param httpAgent         The Http wrapper
+     * @return                  The block number in which the transaction was mined.
      */
     private static String waitingForTransaction(String transacitonId, Http httpAgent) {
         if (Settings.DEBUG_INFO) {
@@ -693,17 +660,14 @@ public final class EtherClient {
         }
 
         boolean loop = true;
-        String blockNumber = new String();
+        String blockNumber = "";
         Object tempObj;
-        String queryTransactionString = "{\"method\":\"eth_getTransactionReceipt\"," +
-                "\"params\":[\"" +
-                transacitonId +
-                "\"]," +
-                "\"id\":42,\"jsonrpc\":\"2.0\"}";
+        String request = getEtherRequest("eth_getTransactionReceipt", transacitonId);
+
         while (loop) {
 
             try {
-                tempObj = httpAgent.getHttpResponse(queryTransactionString);
+                tempObj = httpAgent.getHttpResponse(request);
             } catch (IOException e) {
                 if (Settings.DEBUG_INFO) {
                     System.out.println("Fail to execute HTTP request.");
@@ -729,27 +693,56 @@ public final class EtherClient {
         return blockNumber;
     }
 
+    /**
+     * Validates the balance. The balance should not exceed the Max defined balance.
+     *
+     * @param balance   The balance to validate.
+     * @return          True if balance is valid, otherwise returns False.
+     */
+    private static boolean validateBalance(BigInteger balance) {
+        return (balance.compareTo(Settings.MAX_DEPOSIT) <= 0);
+    }
 
     /**
-     * Constructs the eth_call request String.
-     * @param methodName The name of the method that eth_call should to execute.
-     * @param dataToEncode The data to pass to the executed method.
-     * @return The constructed String.
+     * Constructs the request to the Ether network.
+     *
+     * @param method    Method name to be execute by the Ether network.
+     * @param toAddress the To address.
+     * @param data      the Encoded data.
+     * @return          The constructed String.
      */
-    private static String getEtherCallRequest(String methodName, byte[] dataToEncode){
+    private static String getEtherRequest(String method, String fromAddress, String toAddress,
+                                          String value, String data) {
+        return "{\"method\":\""
+                + method
+                + "\",\"params\":["
+                + "{"
+                + ((fromAddress == null || fromAddress == "") ? "" : "\"from\":\"" + fromAddress + "\",")
+                + ((toAddress == null || toAddress == "") ? "" : "\"to\":\"" + toAddress + "\",")
+                + ((value == null || value == "") ? "" : "\"value\":\"" + value + "\",")
+                + ((data == null || data == "") ? "" : "\"data\":\"" + data + "\"")
+                + "}," + "\"latest\"" + "],"
+                + "\"id\":"
+                + Settings.CHAIN_ID
+                + ",\"jsonrpc\":\"2.0\"}";
+    }
 
-        CallTransaction.Function channels = Settings.CHANNEL_CONTRACT.getByName(methodName);
-        byte[] functionBytes = channels.encode(dataToEncode);
-        String requestString = "{\"method\":\"eth_call\"," +
-                "\"params\":[" +
-                "{" +
-                "\"to\":\"" + Settings.CHANNEL_CONTRACT_ADDRESS + "\"," +
-                "\"data\":\"" + "0x" + new String(Hex.encodeHex(functionBytes)) + "\"" +
-                "}," +
-                "\"latest\"" +
-                "]," +
-                "\"id\":42,\"jsonrpc\":\"2.0\"}";
 
-        return requestString;
+    /**
+     * Constructs the Ether request.
+     *
+     * @param method        The method name.
+     * @param transaction   The Ether transaction.
+     * @return              The constructed Ether request.
+     */
+    private static String getEtherRequest(String method, String transaction) {
+
+        return "{\"method\":\""
+                + method
+                + "\",\"params\":[\""
+                + transaction
+                + "\"],\"id\":"
+                + Settings.CHAIN_ID
+                + ",\"jsonrpc\":\"2.0\"}";
     }
 }

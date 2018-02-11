@@ -1,17 +1,25 @@
 package ether;
 
 import io.left.rightmesh.id.MeshID;
+import io.left.rightmesh.mesh.JavaMeshManager;
 import io.left.rightmesh.mesh.MeshManager;
 import io.left.rightmesh.proto.MeshTransaction;
 import io.left.rightmesh.util.EtherUtility;
 import io.left.rightmesh.util.MeshUtility;
 import io.left.rightmesh.util.RightMeshException;
+import jdk.nashorn.internal.ir.annotations.Immutable;
 import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.ethereum.core.Transaction;
+import org.ethereum.crypto.ECKey;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.concurrent.*;
 import static io.left.rightmesh.mesh.MeshManager.TRANSACTION_RECEIVED;
 
@@ -21,13 +29,8 @@ import static io.left.rightmesh.mesh.MeshManager.TRANSACTION_RECEIVED;
  */
 public final class TransactionsManager {
 
-    private static final int NUM_OF_THREADS = 100;
-    private static final int WAIT_TERMINATION_TIMEOUT = 5; //sec
-
-    private MeshManager meshManager;
+    private JavaMeshManager meshManager;
     private BlockingQueue<MeshManager.MeshTransactionEvent> transactionsQueue = new LinkedBlockingQueue<>();
-    private ConcurrentHashMap<String, EtherUtility.PaymentChannel> channelsMap = new ConcurrentHashMap<>();
-    private ExecutorService executor = Executors.newFixedThreadPool(NUM_OF_THREADS);
     private Thread queueThread = null;
     private volatile boolean isRunning = false;
     private Http httpAgent;
@@ -50,7 +53,7 @@ public final class TransactionsManager {
 
     private TransactionsManager(MeshManager mm) {
         httpAgent = new Http(Settings.RPC_ADDRESS, Settings.DEBUG_INFO);
-        meshManager = mm;
+        meshManager = (JavaMeshManager) mm;
         ownMeshId = mm.getUuid();
         mm.on(TRANSACTION_RECEIVED, this::handleTransactionPacket);
     }
@@ -59,7 +62,7 @@ public final class TransactionsManager {
     /**
      * Handles Transaction packets from the Mesh network.
      *
-     * @param rmEvent
+     * @param rmEvent   The RightMesh event.
      */
     private void handleTransactionPacket(MeshManager.RightMeshEvent rmEvent) {
         if (Settings.DEBUG_INFO) {
@@ -73,7 +76,7 @@ public final class TransactionsManager {
     /**
      * Returns Running state of the Transaction Manager
      *
-     * @return
+     * @return  True if running, otherwise returns False.
      */
     public synchronized boolean isRunning() {
         return isRunning;
@@ -109,22 +112,6 @@ public final class TransactionsManager {
             }
         }
 
-        try {
-            executor.shutdown();
-            executor.awaitTermination(WAIT_TERMINATION_TIMEOUT, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("InterruptedException: " + e);
-            }
-        } finally {
-            if (!executor.isTerminated()) {
-                if (Settings.DEBUG_INFO) {
-                    System.out.println("Cancel all unfinished tasks.");
-                }
-            }
-            executor.shutdownNow();
-        }
-
         transactionsQueue.clear();
     }
 
@@ -142,7 +129,7 @@ public final class TransactionsManager {
     /**
      * Inserts transaction to the transactions queue.
      *
-     * @param event
+     * @param event     The Mesh transaction evet.
      */
     private void insertTransaction(MeshManager.MeshTransactionEvent event) {
         if (!transactionsQueue.offer(event)) {
@@ -168,8 +155,7 @@ public final class TransactionsManager {
                 continue;
             }
 
-            //execute on a separate Thread
-            executor.execute(() -> processTransaction(event));
+            processTransaction(event);
         }
     }
 
@@ -177,11 +163,11 @@ public final class TransactionsManager {
     /**
      * Process the Mesh network trnasctions from Clients-Remote Peers.
      *
-     * @param event
+     * @param event     The Mesh transaction event.
      */
     private void processTransaction(MeshManager.MeshTransactionEvent event) {
         MeshTransaction transaction = event.transaction;
-        byte[] transactionData = new byte[0]; //TODO: transaction.data;
+        byte[] transactionData = transaction.data;
 
         JSONObject jsonObject;
         JSONParser parser = new JSONParser();
@@ -207,10 +193,6 @@ public final class TransactionsManager {
                 processOpenInChannelRequest(event.peerUuid, jsonObject);
                 break;
 
-            case EtherUtility.METHOD_BALANCE_MSG_SIG:
-                processBalanceMessageSignatureRequest(event.peerUuid, jsonObject);
-                break;
-
             default:
                 if (Settings.DEBUG_INFO) {
                     System.out.println("default case in processTransaction method.");
@@ -227,27 +209,21 @@ public final class TransactionsManager {
      */
     private void processGetAllRequest(MeshID sourceId) {
 
-        //Check if SuperPeer-->Client channel already exists in the Map.
-        EtherUtility.PaymentChannel outChannel = getChannelFromMap(ownMeshId.toString(), sourceId.toString());
+        //Check if SuperPeer-->Client exists in the Ether Network.
+        EtherUtility.PaymentChannel outChannel = getChannelFromEtherNetwork(ownMeshId.toString(), sourceId.toString());
+        if(outChannel == null) {
 
-        if (outChannel == null) {
-
-            //If SuperPeer-->Client channel doesn't exist in the map, check if exists in the Ether network.
-            outChannel = getChannelFromEtherNetwork(ownMeshId.toString(), sourceId.toString());
-            if(outChannel == null) {
-
-                //If SuperPeer-->Client channel doesn't exist in the Ether network, lets try to open it.
-                outChannel = openChannel(ownMeshId, sourceId);
-                if (outChannel == null) {
-                    if (Settings.DEBUG_INFO) {
-                        System.out.println("Fatal error, cannot establish SuperPeer-->Client channel: "
-                                + ownMeshId + "-->" + sourceId);
-                    }
-                    byte[] data = JSON.getErrorResponse(EtherUtility.RES_GET_ALL,
-                            "Failed to establish channel: SuperPeer-->Client.");
-                    sendTransaction(sourceId, data);
-                    return;
+            //If SuperPeer-->Client channel doesn't exist in the Ether network, lets try to open it.
+            outChannel = openChannel(ownMeshId, sourceId);
+            if (outChannel == null) {
+                if (Settings.DEBUG_INFO) {
+                    System.out.println("Fatal error, cannot establish SuperPeer-->Client channel: "
+                            + ownMeshId + "-->" + sourceId);
                 }
+                byte[] data = JSON.getErrorResponse(EtherUtility.RES_GET_ALL,
+                        "Failed to establish channel: SuperPeer-->Client.");
+                sendTransaction(sourceId, data);
+                return;
             }
         }
 
@@ -255,13 +231,8 @@ public final class TransactionsManager {
             System.out.println("SuperPeer-->Client: " + outChannel);
         }
 
-        //Check if Client-->SuperPeer channel already exists in the Map.
-        EtherUtility.PaymentChannel inChannel = getChannelFromMap(sourceId.toString(), ownMeshId.toString());
-
-        //If Client-->SuperPeer channel doesn't exist in the map, check if exists in the Ether network.
-        if (inChannel == null) {
-            inChannel = getChannelFromEtherNetwork(sourceId.toString(), ownMeshId.toString());
-        }
+        //Check if Client-->SuperPeer channel exists in the Ether Network.
+        EtherUtility.PaymentChannel inChannel = getChannelFromEtherNetwork(sourceId.toString(), ownMeshId.toString());
 
         if (Settings.DEBUG_INFO) {
             System.out.println("Client-->SuperPeer: " + inChannel == null ? "null" : inChannel);
@@ -270,8 +241,8 @@ public final class TransactionsManager {
         //Get client EtherBalance
         String clientEtherBalance;
         try {
-            clientEtherBalance = EtherClient.getEtherBalance(sourceId.toString(), httpAgent);
-        } catch (IOException e) {
+            clientEtherBalance = EtherClient.getEtherBalance(sourceId.toString(), httpAgent).toString();
+        } catch (IOException | NumberFormatException e) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Failed to get Ether balance for: " + sourceId);
             }
@@ -283,8 +254,8 @@ public final class TransactionsManager {
         //Get client Token balance
         String clientTokenBalance;
         try {
-            clientTokenBalance = EtherClient.getTokenBalance(sourceId.toString(), httpAgent);
-        } catch (IOException e) {
+            clientTokenBalance = EtherClient.getTokenBalance(sourceId.toString(), httpAgent).toString();
+        } catch (IOException | NumberFormatException e) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Failed to get Token balance for: " + sourceId);
             }
@@ -307,26 +278,101 @@ public final class TransactionsManager {
         sendTransaction(sourceId, data);
     }
 
-
     /**
-     * tries to get the payment channel from map.
-     * @param senderAddress The sender address.
-     * @param recvAddress The receiver address.
-     * @return The Payment channel if exists in the map, otherwise returns null.
+     * Processes Open Client to SuperPeer request from a Client-Remote Peer.
+     *
+     * @param sourceId      The MeshId of the remote peer.
+     * @param jsonObject    The Transaction data.
      */
-    private EtherUtility.PaymentChannel getChannelFromMap(String senderAddress, String recvAddress){
-        //Calculate the payment channel hash
-        String superPeerToClientHash = EtherUtility.getChannelHashStr(senderAddress, recvAddress);
-        if(superPeerToClientHash == null || superPeerToClientHash.equals("")){
+    private void processOpenInChannelRequest(MeshID sourceId, JSONObject jsonObject) {
+
+        Object signedApproveTransaction = jsonObject.get("signedApproveTransaction");
+        if (signedApproveTransaction == null) {
             if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to calculate channel hash for: " + senderAddress + "-->" + recvAddress);
+                System.out.println("No signed approve transaction in the open channel request from client.");
             }
-            return null;
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
+                    "No signed approve transaction in the open channel request from client.");
+            sendTransaction(sourceId, data);
+            return;
         }
 
-        return channelsMap.get(superPeerToClientHash);
-    }
 
+        Object signedOpenChannelTransaction = jsonObject.get("signedOpenChannelTransaction");
+        if (signedOpenChannelTransaction == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("No signed transaction in the open channel request from client.");
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
+                    "No signed transaction in the open channel request from client.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        //Check if already exists in the Ether network.
+        EtherUtility.PaymentChannel inChannel = getChannelFromEtherNetwork(sourceId.toString(), ownMeshId.toString());
+        if (inChannel != null) {
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
+                    "Client-->SuperPeer channel already open.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        //Tries to open Client-->SuperPeer channel
+        if (Settings.DEBUG_INFO) {
+            System.out.println("Trying to open " + ownMeshId + "-->" + sourceId + " channel.");
+        }
+
+        inChannel = openChannel(sourceId, ownMeshId);
+        if(inChannel == null){
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
+                    "Failed to open channel Client-->SuperPeer.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        //Get client EtherBalance
+        String clientEtherBalance;
+        try {
+            clientEtherBalance = EtherClient.getEtherBalance(sourceId.toString(), httpAgent).toString();
+        } catch (IOException | NumberFormatException e) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get Ether balance for: " + sourceId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
+                    "Failed to get Ether balance.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        //Get client Token balance
+        String clientTokenBalance;
+        try {
+            clientTokenBalance = EtherClient.getTokenBalance(sourceId.toString(), httpAgent).toString();
+        } catch (IOException | NumberFormatException e) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get Token balance for: " + sourceId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
+                    "Failed to get Token balance.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        BigInteger clientNonce = EtherClient.getNonce(sourceId.toString(), httpAgent);
+        if (clientNonce == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get nonce for: " + sourceId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
+                    "Failed to get nonce.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        byte[] data = JSON.sendOpenClientToSpResponse(inChannel, clientEtherBalance, clientTokenBalance, clientNonce);
+        sendTransaction(sourceId, data);
+    }
 
     /**
      * Tries to get the payment channel from Ether network.
@@ -339,7 +385,7 @@ public final class TransactionsManager {
         EtherUtility.PaymentChannel channel;
         try {
             channel = EtherClient.getChannelInfo(senderAddress, recvAddress, httpAgent);
-        } catch (DecoderException | IOException e) {
+        } catch (IOException e) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Failed to execute getChannelInfo request. "
                         + e.getClass().getCanonicalName() + ": " + e.getMessage());
@@ -405,6 +451,10 @@ public final class TransactionsManager {
             System.out.println("Trying to open " + senderAddress + "-->" + recvAddress + " channel.");
         }
 
+
+        //Increment by 1, as approve transaction executed
+        senderNonce = senderNonce.add(BigInteger.ONE);
+
         //Create and sign open sender-->receiver channel transaction
         String signedOpenChannelTrans = EtherUtility.getSignedOpenChannelTrans(sender, recvAddress,
                 Settings.MAX_DEPOSIT, senderNonce, Settings.CHANNEL_ABI, Settings.GAS_PRICE, Settings.GAS_LIMIT,
@@ -437,295 +487,98 @@ public final class TransactionsManager {
             return null;
         }
 
-        //Payment channel opened, update channelsMap
-        channelsMap.put(channel.channelHash, channel);
-
         return channel;
     }
 
 
     /**
-     * Processes Open Client to SuperPeer request from a Client-Remote Peer
+     * Closes In-Channel and Out-Channel of the remote peer.
      *
-     * @param sourceId The MeshId of the remote peer.
-     * @param jsonObject The Transaction data.
+     * @param remotePeerAddress     The remote peer address.
      */
-    private void processOpenInChannelRequest(MeshID sourceId, JSONObject jsonObject) {
+    public void closeChannels(String remotePeerAddress) {
 
-        Object signedApproveTransaction = jsonObject.get("signedApproveTransaction");
-        if (signedApproveTransaction == null) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("No signed approve transaction in the open channel request from client.");
-            }
-            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
-                    "No signed approve transaction in the open channel request from client.");
-            sendTransaction(sourceId, data);
-            return;
-        }
-
-
-        Object signedOpenChannelTransaction = jsonObject.get("signedOpenChannelTransaction");
-        if (signedOpenChannelTransaction == null) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("No signed transaction in the open channel request from client.");
-            }
-            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
-                    "No signed transaction in the open channel request from client.");
-            sendTransaction(sourceId, data);
-            return;
-        }
-
-        //Check if already exists in the map
-        EtherUtility.PaymentChannel inChannel = getChannelFromMap(sourceId.toString(), ownMeshId.toString());
-        if(inChannel != null){
-            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
-                    "Client-->SuperPeer channel already open.");
-            sendTransaction(sourceId, data);
-            return;
-        }
-
-        //Check if already exists in the Ether network.
-        inChannel = getChannelFromEtherNetwork(sourceId.toString(), ownMeshId.toString());
-        if (inChannel != null) {
-            channelsMap.put(inChannel.channelHash, inChannel);
-            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
-                    "Client-->SuperPeer channel already open.");
-            sendTransaction(sourceId, data);
-            return;
-        }
-
-        //Tries to open Client-->SuperPeer channel
-        if (Settings.DEBUG_INFO) {
-            System.out.println("Trying to open " + ownMeshId + "-->" + sourceId + " channel.");
-        }
-
-        inChannel = openChannel(sourceId, ownMeshId);
-        if(inChannel == null){
-            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
-                    "Failed to open channel Client-->SuperPeer.");
-            sendTransaction(sourceId, data);
-            return;
-        }
-
-        //Update channelsMap
-        channelsMap.put(inChannel.channelHash, inChannel);
-
-        //Get client EtherBalance
-        String clientEtherBalance;
+        MeshID remotePeerMeshId;
         try {
-            clientEtherBalance = EtherClient.getEtherBalance(sourceId.toString(), httpAgent);
-        } catch (IOException e) {
+            remotePeerMeshId = new MeshID(remotePeerAddress);
+        }catch (RightMeshException e){
             if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to get Ether balance for: " + sourceId);
+                System.out.println("Failed to parse MeshId from address: " + remotePeerAddress);
             }
-            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
-                    "Failed to get Ether balance.");
-            sendTransaction(sourceId, data);
             return;
         }
 
-        //Get client Token balance
-        String clientTokenBalance;
+        //Check for In-Channel
+        ImmutablePair<ImmutablePair<byte[], BigInteger>, ImmutablePair<byte[], BigInteger>> bill = null;
         try {
-            clientTokenBalance = EtherClient.getTokenBalance(sourceId.toString(), httpAgent);
-        } catch (IOException e) {
+            bill = meshManager.getTransactionManager().getMostRecentBillFromSender(remotePeerMeshId.getRawUuid());
+        } catch (RightMeshException e){
             if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to get Token balance for: " + sourceId);
+                System.out.println("Failed to get the most recent bill from sender, RightMeshException: "
+                        + e.getMessage());
             }
-            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
-                    "Failed to get Token balance.");
-            sendTransaction(sourceId, data);
-            return;
         }
 
-        BigInteger clientNonce = EtherClient.getNonce(sourceId.toString(), httpAgent);
-        if (clientNonce == null) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to get nonce for: " + sourceId);
-            }
-            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
-                    "Failed to get nonce.");
-            sendTransaction(sourceId, data);
-            return;
-        }
+        if(bill != null) {
+            //In-Channel exist, lets try to close it.
+            System.out.println(ownMeshId + " --> " + remotePeerAddress
+                    + "bill from sender found, trying to close In-Channel...");
 
-        byte[] data = JSON.sendOpenClientToSpResponse(inChannel, clientEtherBalance, clientTokenBalance, clientNonce);
-        sendTransaction(sourceId, data);
-    }
+            ImmutablePair<byte[], BigInteger> balanceProofSig = bill.getLeft();
+            ImmutablePair<byte[], BigInteger> closingSig = bill.getRight();
 
+            //validate the balance in both pairs (balanceProofSig and closingSig)
+            if(balanceProofSig.right.equals(closingSig.right)) {
 
-    /**
-     * Processes the Balance Message Signature from Client-Remote Peer.
-     *
-     * @param sourceId The MeshID of the remote peer, the sender.
-     * @param jsonObject The transaction data.
-     */
-    private void processBalanceMessageSignatureRequest(MeshID sourceId, JSONObject jsonObject) {
-
-        //Get the Client-->SuperPeer channel object
-        EtherUtility.PaymentChannel inChannel = getChannelFromMap(sourceId.toString(), ownMeshId.toString());
-
-        if (inChannel == null) {
-            //If channel doesn't exist in the map, check in the Ether network
-            try {
-                inChannel = EtherClient.getChannelInfo(sourceId.toString(), ownMeshId.toString(), httpAgent);
-            } catch (DecoderException | IOException e) {
-                if (Settings.DEBUG_INFO) {
-                    System.out.println("Failed to execute the getChannelInfo request. "
-                            + e.getClass().getCanonicalName() + ": "+e.getMessage());
+                if(EtherClient.cooperativeCloseReceiver(ownMeshId, remotePeerAddress, closingSig.right,
+                       balanceProofSig.left, closingSig.left, httpAgent)) {
+                    System.out.println("Channel has been closed: " + remotePeerAddress + " --> " + ownMeshId);
+                } else {
+                    System.out.println("Failed to close channel: " + remotePeerAddress + " --> " + ownMeshId);
                 }
-                byte data[] = JSON.getErrorResponse(EtherUtility.RES_Balance_MSG_SIG,
-                        "Failed to execute the getChannelInfo request on the Ether network.");
-                sendTransaction(sourceId, data);
-                return;
-            }
-
-            //If doesn't exist in the Ether network, send error response
-            if (inChannel == null) {
-                byte[] data = JSON.getErrorResponse(EtherUtility.RES_Balance_MSG_SIG,
-                        "Client-->SuperPeer channel doesn't exist in the Ether network.");
-                sendTransaction(sourceId, data);
-                return;
-            }
-
-            //else update the channels map
-            channelsMap.put(inChannel.channelHash, inChannel);
-        }
-
-        //Parse the json request data
-        String lastRecvBalanceMsgSig = jsonObject.get("lastRecvBalanceMsgSig").toString();
-        if (lastRecvBalanceMsgSig == null || lastRecvBalanceMsgSig == "") {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to decode lastRecvBalanceMsgSig from json request from client: " + sourceId);
-            }
-            byte[] data = JSON.getErrorResponse(EtherUtility.RES_Balance_MSG_SIG,
-                    "Failed to decode lastRecvBalanceMsgSig.");
-            sendTransaction(sourceId, data);
-            return;
-        }
-
-        //Parse the new receiver balance
-        String recvBalanceStr = jsonObject.get("recvBalance").toString();
-        if (recvBalanceStr == null || recvBalanceStr == "") {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to decode recvBalance from json request from client: " + sourceId);
-            }
-            byte[] data = JSON.getErrorResponse(EtherUtility.RES_Balance_MSG_SIG,
-                    "Failed to decode recvBalance.");
-            sendTransaction(sourceId, data);
-            return;
-        }
-
-        BigInteger recvBalance = new BigInteger(recvBalanceStr, 10); //TODO: check which base - 10 or 16
-
-        inChannel.lastRecvBalanceMsgSig = lastRecvBalanceMsgSig;
-        inChannel.recvBalance = recvBalance;
-
-        byte[] data = JSON.getOkResponse(EtherUtility.RES_Balance_MSG_SIG);
-
-        try {
-            meshManager.sendDataReliable(sourceId, MeshUtility.TRANSACTION_PORT, data);
-        } catch (RightMeshException e) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to send response to: " + sourceId);
-            }
-        }
-    }
-
-
-    /**
-     * Send payment to the Peer
-     *
-     * @param recvAddress Receiver address
-     * @param amount
-     * @return True on success, otherwise False.
-     */
-    public boolean sendPayment(String recvAddress, BigInteger amount) {
-
-        EtherUtility.PaymentChannel outChannel = getChannelFromMap(ownMeshId.toString(), recvAddress);
-        if(outChannel == null){
-            //If channel doesn't exist in the map, try to get it from the Ether network.
-            outChannel = getChannelFromEtherNetwork(ownMeshId.toString(), recvAddress);
-
-            if(outChannel == null){
+            } else {
                 if (Settings.DEBUG_INFO) {
-                    System.out.println("Channel doesn't exists.");
+                    System.out.println("Error: balance in BalanceProofSig not equal to balance in ClosingSig");
                 }
-                return false;
             }
         }
 
-        BigInteger newBalance = outChannel.recvBalance.add(amount);
-        if (newBalance.compareTo(Settings.MAX_DEPOSIT) > 0) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("No more balance in channel available. Please close this channel");
-            }
-            return false;
-        }
-
-        byte[] newBalanceBytes = EtherUtility.getBalanceBytes(newBalance.toString(), Settings.APPENDING_ZEROS_FOR_TOKEN);
-        if (newBalance == null) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to convert new balance to Byte Array.");
-            }
-            return false;
-        }
-
-        byte[] channelAddressBytes = null;
+        //Check for Out-Channel
+        bill = null;
         try {
-            channelAddressBytes = EtherUtility.etherAddressToByteArray(Settings.CHANNEL_CONTRACT_ADDRESS);
-        } catch (DecoderException e) {
+            bill = meshManager.getTransactionManager().getMostRecentBillToReceiver(remotePeerMeshId.getRawUuid());
+        } catch (RightMeshException e){
             if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to decode address: " + Settings.CHANNEL_CONTRACT_ADDRESS +
-                        ". DecoderException" + e);
+                System.out.println("Failed to get the most recent bill to receiver, RightMeshException: "
+                        + e.getMessage());
             }
         }
 
-        if (channelAddressBytes == null) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to convert Channel Contract Address to Byte Array.");
+        if(bill != null) {
+            //Out-Channel exist, lets try to close it.
+            System.out.println(ownMeshId + " --> " + remotePeerAddress
+                    + "bill to receiver found, trying to close this channel...");
+
+            ImmutablePair<byte[], BigInteger> balanceProofSig = bill.getLeft();
+            ImmutablePair<byte[], BigInteger> closingSig = bill.getRight();
+
+            //validate the balance in both pairs (balanceProofSig and closingSig)
+            if(balanceProofSig.right.equals(closingSig.right)) {
+
+                if(EtherClient.cooperativeCloseSender(ownMeshId, remotePeerAddress, closingSig.right,
+                        balanceProofSig.left, closingSig.left, httpAgent)) {
+
+                    System.out.println("Channel has been closed: " + ownMeshId + " --> " + remotePeerAddress);
+                } else {
+                    System.out.println("Failed to close channel: " + ownMeshId + " --> " + remotePeerAddress);
+                }
+            } else {
+                if (Settings.DEBUG_INFO) {
+                    System.out.println("Error: balance in BalanceProofSig not equal to balance in ClosingSig");
+                }
             }
-            return false;
         }
-
-        byte[] recvAddressBytes;
-        try {
-            recvAddressBytes = EtherUtility.etherAddressToByteArray(recvAddress);
-        } catch (DecoderException e) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to decode recv address: " + recvAddress + ". DecoderException" + e);
-            }
-            return false;
-        }
-
-        String balanceMsgSig = EtherUtility.getBalanceMsgHashSig(recvAddressBytes, newBalanceBytes,
-                channelAddressBytes, ownMeshId);
-        if (balanceMsgSig == null || balanceMsgSig == "") {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Failed calculate BalanceMsgHashSig.");
-            }
-            return false;
-        }
-
-        MeshID recvMeshId;
-        try {
-            recvMeshId = new MeshID(recvAddress);
-        } catch (RightMeshException e) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to constract MeshId from: " + recvAddress);
-            }
-            return false;
-        }
-
-        byte[] data = JSON.sendBalanceMsgSig(newBalance, balanceMsgSig);
-        sendTransaction(recvMeshId, data);
-
-        outChannel.recvBalance = newBalance;
-        outChannel.lastRecvBalanceMsgSig = balanceMsgSig;
-
-        return true;
     }
-
 
     /**
      * Sends the transaction to Peer.
@@ -733,12 +586,6 @@ public final class TransactionsManager {
      * @param transaction The transaction.
      */
     private void sendTransaction(MeshID destination, byte[] transaction) {
-        try {
-            meshManager.sendDataReliable(destination, MeshUtility.TRANSACTION_PORT, transaction);
-        } catch (RightMeshException e) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to send transaction to: " + destination);
-            }
-        }
+        meshManager.sendDataReliable(destination, MeshUtility.TRANSACTION_PORT, transaction);
     }
 }
