@@ -315,6 +315,8 @@ public final class EtherClient {
 
         request = getEtherRequest("eth_sendRawTransaction", signedApproveTrans);
 
+        System.out.println("Submitting approve Transaction...");
+
         String transactionId;
         try {
             transactionId = (String) httpAgent.getHttpResponse(request);
@@ -386,34 +388,36 @@ public final class EtherClient {
             System.out.println("The request string of queryCreatChannelGasString is " + request);
         }
 
-        String gasEstimateRes;
-        try {
-            gasEstimateRes = (String) httpAgent.getHttpResponse(request);
-        } catch (IOException e) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Invoking function with given arguments is not allowed.");
-            }
-            throw e;
-        }
-
-        if(gasEstimateRes == null) {
-            if (Settings.DEBUG_INFO) {
-                System.out.println("Failed to get response from the Ether node.");
-            }
-            return null;
-        }
-
-        if (Settings.DEBUG_INFO) {
-            System.out.println("The estimated Gas of createChannelERC20 is " + gasEstimateRes);
-        }
-
-        gasEstimateRes = gasEstimateRes.substring(2);
-        BigInteger estimatedGas = new BigInteger(gasEstimateRes, 16);
-        if (estimatedGas.compareTo(Settings.GAS_LIMIT) > 0)
-            throw new IllegalArgumentException("Exceeded GAS estimation. "
-                    + "Probably invalid signed transaction provided.");
+//        String gasEstimateRes;
+//        try {
+//            gasEstimateRes = (String) httpAgent.getHttpResponse(request);
+//        } catch (IOException e) {
+//            if (Settings.DEBUG_INFO) {
+//                System.out.println("Invoking function with given arguments is not allowed.");
+//            }
+//            throw e;
+//        }
+//
+//        if(gasEstimateRes == null) {
+//            if (Settings.DEBUG_INFO) {
+//                System.out.println("Failed to get response from the Ether node.");
+//            }
+//            return null;
+//        }
+//
+//        if (Settings.DEBUG_INFO) {
+//            System.out.println("The estimated Gas of createChannelERC20 is " + gasEstimateRes);
+//        }
+//
+//        gasEstimateRes = gasEstimateRes.substring(2);
+//        BigInteger estimatedGas = new BigInteger(gasEstimateRes, 16);
+//        if (estimatedGas.compareTo(Settings.GAS_LIMIT) > 0)
+//            throw new IllegalArgumentException("Exceeded GAS estimation. "
+//                    + "Probably invalid signed transaction provided.");
 
         request = getEtherRequest("eth_sendRawTransaction", signedOpenChannelTrans);
+
+        System.out.println("Submitting Open-Channel Transaction...");
 
         String transactionId;
         try {
@@ -660,6 +664,8 @@ public final class EtherClient {
         if (Settings.DEBUG_INFO) {
             System.out.println("Waiting for Transaction ID: " + transacitonId);
         }
+
+        System.out.println("Waiting for Transaction " + transacitonId + " to be mined...");
 
         boolean loop = true;
         String blockNumber = "";

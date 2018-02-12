@@ -210,13 +210,21 @@ public final class TransactionsManager {
      */
     private void processGetAllRequest(MeshID sourceId) {
 
+        System.out.println("GetAll received from " + sourceId);
+        System.out.println("Checking if Out-Channel " + ownMeshId + "-->" + sourceId + " exists.");
+
         //Check if SuperPeer-->Client exists in the Ether Network.
         EtherUtility.PaymentChannel outChannel = getChannelFromEtherNetwork(ownMeshId.toString(), sourceId.toString());
         if(outChannel == null) {
 
+            System.out.println("Out-Channel doesn't exist, trying to open " + ownMeshId + "-->" + sourceId);
+
             //If SuperPeer-->Client channel doesn't exist in the Ether network, lets try to open it.
             outChannel = openChannel(ownMeshId, sourceId);
             if (outChannel == null) {
+
+                System.out.println("Failed to open channel.");
+
                 if (Settings.DEBUG_INFO) {
                     System.out.println("Fatal error, cannot establish SuperPeer-->Client channel: "
                             + ownMeshId + "-->" + sourceId);
@@ -226,11 +234,20 @@ public final class TransactionsManager {
                 sendTransaction(sourceId, data);
                 return;
             }
+
+            System.out.println("Out-Channel OPENED: " + ownMeshId + "-->" + sourceId);
         }
+        else {
+            System.out.println("Out-Channel already exist: " + ownMeshId + "-->" + sourceId);
+        }
+
+
 
         if (Settings.DEBUG_INFO) {
             System.out.println("SuperPeer-->Client: " + outChannel);
         }
+
+        System.out.println("Checking In-Channel: " + sourceId + "-->" + ownMeshId);
 
         //Check if Client-->SuperPeer channel exists in the Ether Network.
         EtherUtility.PaymentChannel inChannel = getChannelFromEtherNetwork(sourceId.toString(), ownMeshId.toString());
@@ -238,6 +255,15 @@ public final class TransactionsManager {
         if (Settings.DEBUG_INFO) {
             System.out.println("Client-->SuperPeer: " + inChannel == null ? "null" : inChannel);
         }
+
+        if(inChannel == null) {
+            System.out.println("In-Channel doesn't exist");
+        }
+        else {
+            System.out.println("In-Channel already exist.");
+        }
+
+        System.out.println("Collecting data... ");
 
         //Get client EtherBalance
         String clientEtherBalance;
@@ -275,8 +301,14 @@ public final class TransactionsManager {
             return;
         }
 
+        System.out.println("Remote Peer Ether balance: " + clientEtherBalance);
+        System.out.println("Remote Peer Token balance: " + clientTokenBalance);
+        System.out.println("Remote Peer Nonce: " + clientNonce);
+
         byte[] data = JSON.sendGetAllResponse(outChannel, inChannel, clientEtherBalance, clientTokenBalance, clientNonce);
         sendTransaction(sourceId, data);
+
+        System.out.println("Response sent.");
     }
 
     /**
@@ -287,7 +319,10 @@ public final class TransactionsManager {
      */
     private void processOpenInChannelRequest(MeshID sourceId, JSONObject jsonObject) {
 
-        Object signedApproveTransaction = jsonObject.get("signedApproveTransaction");
+        System.out.println("Open In-Channel received from " + sourceId);
+        System.out.println("Checking if In-Channel " + sourceId + "-->" + ownMeshId + " exists.");
+
+        Object signedApproveTransaction = jsonObject.get("signedApproveTrans");
         if (signedApproveTransaction == null) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("No signed approve transaction in the open channel request from client.");
@@ -299,7 +334,7 @@ public final class TransactionsManager {
         }
 
 
-        Object signedOpenChannelTransaction = jsonObject.get("signedOpenChannelTransaction");
+        Object signedOpenChannelTransaction = jsonObject.get("signedOpenChannelTrans");
         if (signedOpenChannelTransaction == null) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("No signed transaction in the open channel request from client.");
@@ -313,24 +348,36 @@ public final class TransactionsManager {
         //Check if already exists in the Ether network.
         EtherUtility.PaymentChannel inChannel = getChannelFromEtherNetwork(sourceId.toString(), ownMeshId.toString());
         if (inChannel != null) {
+
+            System.out.println("Error: In-Channel already exist");
+
             byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
                     "Client-->SuperPeer channel already open.");
             sendTransaction(sourceId, data);
             return;
         }
 
+        System.out.println("In-Channel doesn't exist, trying to open " + sourceId + "-->" + ownMeshId);
+
         //Tries to open Client-->SuperPeer channel
         if (Settings.DEBUG_INFO) {
             System.out.println("Trying to open " + ownMeshId + "-->" + sourceId + " channel.");
         }
 
-        inChannel = openChannel(sourceId, ownMeshId);
+        inChannel = openChannel(sourceId, ownMeshId, signedApproveTransaction.toString(),
+                signedOpenChannelTransaction.toString());
         if(inChannel == null){
+
+            System.out.println("Failed to open In-Channel: " + sourceId + "-->" + ownMeshId);
+
             byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
                     "Failed to open channel Client-->SuperPeer.");
             sendTransaction(sourceId, data);
             return;
         }
+
+        System.out.println("In-Channel Opened: " + sourceId + "-->" + ownMeshId);
+        System.out.println("Collecting data... ");
 
         //Get client EtherBalance
         String clientEtherBalance;
@@ -371,8 +418,15 @@ public final class TransactionsManager {
             return;
         }
 
+
+        System.out.println("Remote Peer Ether balance: " + clientEtherBalance);
+        System.out.println("Remote Peer Token balance: " + clientTokenBalance);
+        System.out.println("Remote Peer Nonce: " + clientNonce);
+
         byte[] data = JSON.sendOpenClientToSpResponse(inChannel, clientEtherBalance, clientTokenBalance, clientNonce);
         sendTransaction(sourceId, data);
+
+        System.out.println("Response sent.");
     }
 
     /**
@@ -460,6 +514,88 @@ public final class TransactionsManager {
         String signedOpenChannelTrans = EtherUtility.getSignedOpenChannelTrans(sender, recvAddress,
                 Settings.INIT_DEPOSIT, senderNonce, Settings.CHANNEL_ABI, Settings.GAS_PRICE, Settings.GAS_LIMIT,
                 Settings.CHANNEL_CONTRACT_ADDRESS, Settings.CHAIN_ID);
+
+        if (signedOpenChannelTrans == null || signedOpenChannelTrans == "") {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get signedOpenChannelTrans for: " + senderAddress + "-->" + recvAddress);
+            }
+            return null;
+        }
+
+        //Send the signed open payment channel transaction to the Ether network.
+        try {
+            channel = EtherClient.openChannel(senderAddress, recvAddress, Settings.INIT_DEPOSIT,
+                    signedOpenChannelTrans, httpAgent);
+        } catch (IOException | IllegalArgumentException e) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to open channel " + senderAddress + "-->" + recvAddress + ", "
+                        + e.getClass().getCanonicalName() + ": " + e.getMessage());
+            }
+            return null;
+        }
+
+        //Failed to open the payment channel in the Ether network, has no more ideas
+        if (channel == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to open channel: " + senderAddress + "-->" + recvAddress);
+            }
+            return null;
+        }
+
+        return channel;
+    }
+
+
+    private EtherUtility.PaymentChannel openChannel(MeshID sender, MeshID receiver,
+                                                    String signedApproveTrans, String signedOpenChannelTrans) {
+
+        String senderAddress = sender.toString();
+        String recvAddress = receiver.toString();
+
+        EtherUtility.PaymentChannel channel;
+
+        //Try to get nonce of the sender
+        BigInteger senderNonce = EtherClient.getNonce(senderAddress, httpAgent);
+        if (senderNonce == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get nonce for address: " + senderAddress);
+            }
+            return null;
+        }
+
+        //Approve Channel contract to transfer tokens to the newly created payment channel.
+        String signedApproveTransaction = signedApproveTrans;
+
+        if (signedApproveTransaction == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to construct approve transaction.");
+            }
+            return null;
+        }
+
+        boolean res = true;
+        try {
+            res = EtherClient.approve(senderAddress, Settings.INIT_DEPOSIT, signedApproveTransaction, httpAgent);
+        } catch (IOException e) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to submit approve transaction. IOException: " + e.getMessage());
+            }
+            return null;
+        }
+
+        if (!res) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to submit approve transaction.");
+            }
+            return null;
+        }
+
+        if (Settings.DEBUG_INFO) {
+            System.out.println("Trying to open " + senderAddress + "-->" + recvAddress + " channel.");
+        }
+
+        //Increment by 1, as approve transaction executed
+        senderNonce = senderNonce.add(BigInteger.ONE);
 
         if (signedOpenChannelTrans == null || signedOpenChannelTrans == "") {
             if (Settings.DEBUG_INFO) {

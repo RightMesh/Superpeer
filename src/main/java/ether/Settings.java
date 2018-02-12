@@ -140,6 +140,10 @@ public class Settings {
                         }
                         break;
 
+                    case "appendingZerosForETH":
+                    case "appendingZerosForTKN":
+                        //already parsed
+                        break;
 
                     default:
                         System.out.println("Unknown key is detected when parsing the configuration files.");
