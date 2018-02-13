@@ -388,6 +388,8 @@ public final class EtherClient {
             System.out.println("The request string of queryCreatChannelGasString is " + request);
         }
 
+
+        //TODO: fix the gas estmation
 //        String gasEstimateRes;
 //        try {
 //            gasEstimateRes = (String) httpAgent.getHttpResponse(request);

@@ -1,28 +1,25 @@
 package ether;
 
+import static io.left.rightmesh.mesh.MeshManager.TRANSACTION_RECEIVED;
+
 import io.left.rightmesh.id.MeshID;
 import io.left.rightmesh.mesh.JavaMeshManager;
 import io.left.rightmesh.mesh.MeshManager;
-import io.left.rightmesh.mesh.TransactionManager;
 import io.left.rightmesh.proto.MeshTransaction;
 import io.left.rightmesh.util.EtherUtility;
 import io.left.rightmesh.util.MeshUtility;
 import io.left.rightmesh.util.RightMeshException;
-import jdk.nashorn.internal.ir.annotations.Immutable;
-import org.apache.commons.codec.DecoderException;
+
 import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.ethereum.core.Transaction;
-import org.ethereum.crypto.ECKey;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.Arrays;
 import java.util.concurrent.*;
-import static io.left.rightmesh.mesh.MeshManager.TRANSACTION_RECEIVED;
 
 
 /**
@@ -94,7 +91,6 @@ public final class TransactionsManager {
             isRunning = true;
         }
     }
-
 
     /**
      * Stops the Transactions Manager and cleans resources.

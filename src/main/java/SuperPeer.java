@@ -4,18 +4,11 @@
 import ether.Settings;
 import ether.TransactionsManager;
 
-import io.left.rightmesh.id.MeshID;
 import io.left.rightmesh.mesh.JavaMeshManager;
 import io.left.rightmesh.mesh.MeshManager;
-import io.left.rightmesh.mesh.MeshStateListener;
-import io.left.rightmesh.util.MeshUtility;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-
-import static io.left.rightmesh.mesh.MeshManager.TRANSACTION_RECEIVED;
-
 
 public class SuperPeer {
 
@@ -37,9 +30,6 @@ public class SuperPeer {
     public SuperPeer() {
         mm = new JavaMeshManager(true);
         System.out.println("Superpeer MeshID: " + mm.getUuid());
-
-        //mm.on(TRANSACTION_RECEIVED, this::handleTransactionPacket);
-
         System.out.println("Waiting for lib to be ready");
         try {
             Thread.sleep(200);
@@ -48,10 +38,6 @@ public class SuperPeer {
 
         tm = TransactionsManager.getInstance(mm);
         tm.start();
-
-        System.out.println("SuperPeer ID: " + mm.getUuid());
-
-        //mm.sendDataReliable(mm.getUuid(), MeshUtility.TRANSACTION_PORT, "hello".getBytes());
 
         String msg;
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -68,14 +54,6 @@ public class SuperPeer {
 
         tm.stop();
         mm.stop();
-    }
-
-    private void handleTransactionPacket(MeshManager.RightMeshEvent rmEvent) {
-        if (Settings.DEBUG_INFO) {
-            System.out.println("Transaction received.");
-        }
-
-        MeshManager.MeshTransactionEvent event = (MeshManager.MeshTransactionEvent) rmEvent;
     }
 
     private void processInput(String msg) {
