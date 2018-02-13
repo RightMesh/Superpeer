@@ -54,6 +54,8 @@ public class SuperPeer {
 
         tm.stop();
         mm.stop();
+
+        System.exit(0);
     }
 
     private void processInput(String msg) {
