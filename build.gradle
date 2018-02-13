@@ -15,10 +15,10 @@
  * outside of the VM as follows: curl --data '{"method":"eth_accounts","params":[],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8545'
  * and you shouldn't get an error about connections.
  */
-import com.bmuschko.gradle.vagrant.tasks.Vagrant
-import com.bmuschko.gradle.vagrant.tasks.VagrantUp
-import com.bmuschko.gradle.vagrant.tasks.VagrantSsh
-import com.bmuschko.gradle.vagrant.tasks.VagrantDestroy
+//import com.bmuschko.gradle.vagrant.tasks.Vagrant
+//import com.bmuschko.gradle.vagrant.tasks.VagrantUp
+//import com.bmuschko.gradle.vagrant.tasks.VagrantSsh
+//import com.bmuschko.gradle.vagrant.tasks.VagrantDestroy
 
 // Apply the java plugin to add support for Java
 apply plugin: 'java'
@@ -29,10 +29,10 @@ apply plugin: 'application'
 applicationDefaultJvmArgs = ["-noverify"]
 buildscript {
     ext {
-        virtualBoxDir = file('build/parity')
-        artifactory_app_username = "insertyourusername"
-        artifactory_app_password = "insertyourpasswordhash"
-        artifactory_app_key = "insertyourkey"
+        //virtualBoxDir = file('build/parity')
+        artifactory_app_username = "username"
+        artifactory_app_password = "password"
+        artifactory_app_key = "app_key"
     }
     repositories {
         mavenCentral()
@@ -62,6 +62,9 @@ build.dependsOn("rightmesh")
 
 repositories {
     mavenCentral()
+    maven {
+        url "https://dl.bintray.com/ethereum/maven/"
+    }
     jcenter()
     maven {
         url "http://research.rightmesh.io/artifactory/libs-local"
@@ -74,55 +77,60 @@ repositories {
 
 dependencies {
     // This dependency is found on compile classpath of this component and consumers.
+    compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.3.4'
     compile 'com.google.guava:guava:23.0'
-    compile ('io.left.rightmesh:rightmesh-java-library:0.4.1')
+    compile ('io.left.rightmesh:rightmesh-java-library-dev:0.4.2-IGOR-SNAPSHOT')
     // Use JUnit test framework
     testCompile 'junit:junit:4.12'
+
+    // https://mvnrepository.com/artifact/org.ethereum/ethereumj-core
+    implementation (group: 'org.ethereum', name: 'ethereumj-core', version: '1.4.5-RELEASE')
+    //compile 'org.ethereum:solcJ-all:0.4.10'
 }
 
-//Sets the repo we will pull the parity vagrant setup from. Also specifies
-//the commit hash, or remote branch with some like 'origin/master'
-task cloneParity(type: com.palominolabs.gradle.task.git.clone.GitCloneTask) {
-  dir = file("$buildDir/parity")
-  uri = 'https://github.com/RightMesh/vagrant-eth-env.git'
-  treeish = 'c1b27375a9c11a718bdaae7aad4769e5bdd19cc9'
-}
-
-task cloneStatus {
-    doLast {
-        if (cloneParity.state.failure != null) {
-            //here is what should be executed if cloneParity fails
-            println 'Failed to use ssh to connect to gitlab. Setup your ssh key and test with `ssh -T git@github.com`. More instructions at https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account/'
-        }
-    }
-}
-
-// creates and starts a parity VM
-task startParity(type: VagrantUp) {
-    description = 'Starts VM machine running on VirtualBox.'
-    group = 'VirtualBox VM'
-    boxDir = virtualBoxDir
-}
-
-// stops and destroys the vagrant VM for parity
-task destroyParity(type: VagrantDestroy ) {
-    description = 'Destroys VM machine running on VirtualBox.'
-    group = 'VirtualBox VM'
-    boxDir = virtualBoxDir
-}
-
-// will destory the old parity and attempt to create and start a new
-// one - should be used if something totally borks up
-task refreshParity {
-    doFirst {
-        destroyParity
-    }
-    finalizedBy {
-        startParity
-    }
-}
-
-// Define the main class for the application
+////Sets the repo we will pull the parity vagrant setup from. Also specifies
+////the commit hash, or remote branch with some like 'origin/master'
+//task cloneParity(type: com.palominolabs.gradle.task.git.clone.GitCloneTask) {
+//  dir = file("$buildDir/parity")
+//  uri = 'https://github.com/RightMesh/vagrant-eth-env.git'
+//  treeish = 'c1b27375a9c11a718bdaae7aad4769e5bdd19cc9'
+//}
+//
+//task cloneStatus {
+//    doLast {
+//        if (cloneParity.state.failure != null) {
+//            //here is what should be executed if cloneParity fails
+//            println 'Failed to use ssh to connect to gitlab. Setup your ssh key and test with `ssh -T git@github.com`. More instructions at https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account/'
+//        }
+//    }
+//}
+//
+//// creates and starts a parity VM
+//task startParity(type: VagrantUp) {
+//    description = 'Starts VM machine running on VirtualBox.'
+//    group = 'VirtualBox VM'
+//    boxDir = virtualBoxDir
+//}
+//
+//// stops and destroys the vagrant VM for parity
+//task destroyParity(type: VagrantDestroy ) {
+//    description = 'Destroys VM machine running on VirtualBox.'
+//    group = 'VirtualBox VM'
+//    boxDir = virtualBoxDir
+//}
+//
+//// will destory the old parity and attempt to create and start a new
+//// one - should be used if something totally borks up
+//task refreshParity {
+//    doFirst {
+//        destroyParity
+//    }
+//    finalizedBy {
+//        startParity
+//    }
+//}
+//
+//// Define the main class for the application
 mainClassName = 'SuperPeer'
 
 // only required for local builds where we want to run the parity
@@ -130,4 +138,5 @@ mainClassName = 'SuperPeer'
 //cloneParity.finalizedBy cloneStatus
 //startParity.dependsOn(cloneParity)
 //destroyParity.dependsOn(cloneParity)
+
 //compileJava.dependsOn(startParity)
