@@ -648,7 +648,7 @@ public final class EtherClient {
         }
 
         if(Settings.DEBUG_INFO) {
-            System.out.println("Channel has been closed: " + recvAddress + " --> " + sigMeshId);
+            System.out.println("Channel has been closed: " + sigMeshId + " --> " + recvAddress);
         }
 
         return true;

@@ -10,9 +10,7 @@ import io.left.rightmesh.util.EtherUtility;
 import io.left.rightmesh.util.MeshUtility;
 import io.left.rightmesh.util.RightMeshException;
 
-import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.ethereum.core.Transaction;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -91,6 +89,7 @@ public final class TransactionsManager {
             isRunning = true;
         }
     }
+
 
     /**
      * Stops the Transactions Manager and cleans resources.
@@ -202,7 +201,7 @@ public final class TransactionsManager {
     /**
      * Processes the Get All request from Client-Remote Peer
      *
-     * @param sourceId
+     * @param sourceId  The source id.
      */
     private void processGetAllRequest(MeshID sourceId) {
 
@@ -236,7 +235,6 @@ public final class TransactionsManager {
         else {
             System.out.println("Out-Channel already exist: " + ownMeshId + "-->" + sourceId);
         }
-
 
 
         if (Settings.DEBUG_INFO) {
@@ -660,7 +658,6 @@ public final class TransactionsManager {
             ImmutablePair<byte[], BigInteger> balanceProofSig = bill.getLeft();
             ImmutablePair<byte[], BigInteger> closingSig = bill.getRight();
 
-            //TODO: check this
             //validate the balance in both pairs (balanceProofSig and closingSig)
             //In the In-Channel both balances should be the same, as the balanceProof received from the remote peer
             //and the ClosingSig should be generated locally.
@@ -680,9 +677,9 @@ public final class TransactionsManager {
             if(balanceProofSig.right.equals(closingSig.right)) {
                 if(EtherClient.cooperativeCloseReceiver(ownMeshId, remotePeerAddress, closingSig.right,
                        balanceProofSig.left, closingSig.left, httpAgent)) {
-                    System.out.println("Channel has been closed: " + remotePeerAddress + " --> " + ownMeshId);
+                    System.out.println("In-Channel has been closed: " + remotePeerAddress + " --> " + ownMeshId);
                 } else {
-                    System.out.println("Failed to close channel: " + remotePeerAddress + " --> " + ownMeshId);
+                    System.out.println("Failed to close In-Channel: " + remotePeerAddress + " --> " + ownMeshId);
                 }
             } else {
                 if (Settings.DEBUG_INFO) {
@@ -710,13 +707,13 @@ public final class TransactionsManager {
             ImmutablePair<byte[], BigInteger> balanceProofSig = bill.getLeft();
             ImmutablePair<byte[], BigInteger> closingSig = bill.getRight();
 
-            //TODO: check this
             //validate the balance in both pairs (balanceProofSig and closingSig)
             //This situation could happen in the Out-Channel,
             // as we are waiting for the CloseSig to arrive from the remote peer.
             if(!balanceProofSig.right.equals(closingSig.right)) {
                 if (Settings.DEBUG_INFO) {
-                    System.out.println("Error closing Out-Channel: balance in BalanceProofSig not equal to balance in ClosingSig."
+                    System.out.println("Error closing Out-Channel: "
+                            + "balance in BalanceProofSig not equal to balance in ClosingSig."
                             + "This, currently could happen in the Out-Channel.");
 
                     System.out.println("Regenerating BalanceProof for balance: " + balanceProofSig.right);
@@ -732,15 +729,18 @@ public final class TransactionsManager {
                         balanceProofSig.left, closingSig.left, httpAgent)) {
                     System.out.println("Out-Channel has been closed: " + ownMeshId + " --> " + remotePeerAddress);
                 } else {
-                    System.out.println("Failed to close Out-Channel: " + ownMeshId + " --> " + remotePeerAddress);
+                    System.out.println("Failed to close Out-Channel: " + ownMeshId
+                            + " --> " + remotePeerAddress);
                 }
             } else {
                 if (Settings.DEBUG_INFO) {
-                    System.out.println("Fatal Error: Out-Channel balance is not equal after regenerating a new BalanceProof.");
+                    System.out.println("Fatal Error: "
+                            + "Out-Channel balance is not equal after regenerating a new BalanceProof.");
                 }
             }
         }
     }
+
 
     /**
      * Sends the transaction to Peer.
