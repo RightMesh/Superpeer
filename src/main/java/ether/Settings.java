@@ -16,6 +16,8 @@ import java.math.BigInteger;
  */
 public class Settings {
     public final static String RPC_ADDRESS;
+    public final static boolean DEBUG_INFO;
+
     public final static String CHANNEL_CONTRACT_ADDRESS;
     public final static String TOKEN_CONTRACT_ADDRESS;
     public final static String CHANNEL_ABI;
@@ -29,7 +31,7 @@ public class Settings {
     public final static BigInteger INIT_DEPOSIT;
     public final static BigInteger GAS_PRICE;
     public final static BigInteger GAS_LIMIT;
-    public final static boolean DEBUG_INFO;
+
     public final static long TRANS_CHECK_INTERAVAL;
     public final static int LENGTH_OF_ID_IN_BYTES;
     public final static int CHAIN_ID;
@@ -37,6 +39,8 @@ public class Settings {
 
     static {
         String rpcAddress = "";
+        boolean debugInfo = false;
+
         String channelContractAddr = "";
         String tokenContractAddr = "";
         String channelABI = "";
@@ -50,7 +54,7 @@ public class Settings {
         BigInteger initDeposit = null;
         BigInteger gasPrice = null;
         BigInteger gasLimit = null;
-        boolean debugInfo = false;
+
         long transCheckInterval = 1000;
         int lengthOfIdInBytes = 20;
         int chainId = 20;
@@ -60,8 +64,9 @@ public class Settings {
         try {
             Object obj = parser.parse(new FileReader("rm-ethereum.conf"));
             JSONObject jsonObject = (JSONObject) obj;
-            appendingZerosForETH = ((String) jsonObject.get("appendingZerosForETH"));
-            appendingZerosForTKN = ((String) jsonObject.get("appendingZerosForTKN"));
+
+            //appendingZerosForETH = ((String) jsonObject.get("appendingZerosForETH"));
+            //appendingZerosForTKN = ((String) jsonObject.get("appendingZerosForTKN"));
 
             for (Object key : jsonObject.keySet()) {
                 switch ((String) key) {
@@ -160,6 +165,8 @@ public class Settings {
 
 
         RPC_ADDRESS = rpcAddress;
+        DEBUG_INFO = debugInfo;
+
         CHANNEL_CONTRACT_ADDRESS = channelContractAddr;
         TOKEN_CONTRACT_ADDRESS = tokenContractAddr;
         CHANNEL_ABI = channelABI;
@@ -173,7 +180,7 @@ public class Settings {
         INIT_DEPOSIT = initDeposit;
         GAS_PRICE = gasPrice;
         GAS_LIMIT = gasLimit;
-        DEBUG_INFO = debugInfo;
+
         TRANS_CHECK_INTERAVAL = transCheckInterval;
         LENGTH_OF_ID_IN_BYTES = lengthOfIdInBytes;
         CHAIN_ID = chainId;
