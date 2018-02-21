@@ -65,8 +65,8 @@ public class Settings {
             Object obj = parser.parse(new FileReader("rm-ethereum.conf"));
             JSONObject jsonObject = (JSONObject) obj;
 
-            //appendingZerosForETH = ((String) jsonObject.get("appendingZerosForETH"));
-            //appendingZerosForTKN = ((String) jsonObject.get("appendingZerosForTKN"));
+            appendingZerosForETH = ((String) jsonObject.get("appendingZerosForETH"));
+            appendingZerosForTKN = ((String) jsonObject.get("appendingZerosForTKN"));
 
             for (Object key : jsonObject.keySet()) {
                 switch ((String) key) {
