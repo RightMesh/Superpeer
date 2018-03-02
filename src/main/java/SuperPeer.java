@@ -1,4 +1,3 @@
-
 import ether.TransactionsManager;
 
 import io.left.rightmesh.mesh.JavaMeshManager;
@@ -7,23 +6,28 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 public class SuperPeer {
-
     //TODO: Add logger instead of system.out
     public static final String TAG = SuperPeer.class.getCanonicalName();
 
     private static final String EXIT_CMD = "exit";
     private static final String CLOSE_CHANNEL_CMD = "close";
 
-
     JavaMeshManager mm;
     private boolean isRunning = true;
     private TransactionsManager tm;
 
     public static void main(String[] args) {
-        SuperPeer p = new SuperPeer();
+        if (args.length > 0 && (args[0].equals("-h") || args[0].equals("--headless"))) {
+            // Doesn't read from STDIN if run with `-h` or `--headless`.
+            // Useful for backgrounding.
+            SuperPeer serviceMode = new SuperPeer(false);
+        } else {
+            // Default condition, runs in interactive mode.
+            SuperPeer interactiveMode = new SuperPeer(true);
+        }
     }
 
-    public SuperPeer() {
+    public SuperPeer(boolean interactive) {
         mm = new JavaMeshManager(true);
         System.out.println("Superpeer MeshID: " + mm.getUuid());
         System.out.println("Superpeer is waiting for library ... ");
