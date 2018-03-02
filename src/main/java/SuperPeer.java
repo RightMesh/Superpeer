@@ -29,37 +29,65 @@ public class SuperPeer {
 
     public SuperPeer(boolean interactive) {
         mm = new JavaMeshManager(true);
+
         System.out.println("Superpeer MeshID: " + mm.getUuid());
         System.out.println("Superpeer is waiting for library ... ");
         try {
             Thread.sleep(200);
-        } catch (InterruptedException e) {
-        }
+
+        } catch (InterruptedException ignored) { }
+
+
         tm = TransactionsManager.getInstance(mm);
-        if(tm == null){
+        if (tm == null){
             System.out.println("Failed to get TransactionManager from library. Superpeer is shutting down ...");
             mm.stop();
             System.exit(0);
         }
         tm.start();
         System.out.println("Superpeer is ready!");
-        String msg;
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
-        do {
-            try {
-                msg = br.readLine();
-                processInput(msg);
-            } catch (IOException e) {
-                e.printStackTrace();
-                break;
-            }
-        } while (isRunning);
+        // Stop everything when runtime is killed.
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            SuperPeer.this.finish();
+        }));
 
+        if (interactive) {
+            // Block for user input if running in interactive mode.
+            String msg;
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            do {
+                try {
+                    msg = br.readLine();
+                    processInput(msg);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    break;
+                }
+            } while (isRunning);
+
+            // Clean up and exit when exit command is entered.
+            finish();
+            System.exit(0);
+        } else {
+            // Infinitely loop if run in quiet mode.
+            while (true) { /* Loop until killed. */ }
+        }
+    }
+
+    /**
+     * Default to interactive mode.
+     */
+    public SuperPeer() {
+        this(true);
+    }
+
+    /**
+     * Shut down mesh functionality cleanly. Must be run on exit or port will remain bound.
+     */
+    private void finish() {
         tm.stop();
         mm.stop();
-
-        System.exit(0);
     }
 
     private void processInput(String msg) {
