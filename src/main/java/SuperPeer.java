@@ -38,7 +38,7 @@ public class SuperPeer {
             System.exit(0);
         }
         tm.start();
-        System.out.println("Superpeer is ready!")
+        System.out.println("Superpeer is ready!");
         String msg;
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
