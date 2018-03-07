@@ -33,7 +33,6 @@ buildscript {
         artifactory_app_username = "username"
         artifactory_app_password = "password"
         artifactory_app_key = "app_key"
-
     }
     repositories {
         mavenCentral()
