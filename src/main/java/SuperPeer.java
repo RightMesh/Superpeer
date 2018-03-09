@@ -28,7 +28,7 @@ public class SuperPeer {
         System.out.println("Superpeer MeshID: " + mm.getUuid());
         System.out.println("Superpeer is waiting for library ... ");
         try {
-            Thread.sleep(2000);
+            Thread.sleep(200);
         } catch (InterruptedException e) {
         }
         tm = TransactionsManager.getInstance(mm);
