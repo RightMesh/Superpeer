@@ -79,7 +79,7 @@ dependencies {
     // This dependency is found on compile classpath of this component and consumers.
     implementation group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.3.4'
     implementation 'com.google.guava:guava:23.0'
-    implementation ('io.left.rightmesh:rightmesh-java-library:0.4.4')
+    implementation ('io.left.rightmesh:rightmesh-java-library-dev:0.4.4-DAVID-SNAPSHOT')
     // Use JUnit test framework
     testCompile 'junit:junit:4.12'
 
