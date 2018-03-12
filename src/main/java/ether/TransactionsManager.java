@@ -10,6 +10,7 @@ import io.left.rightmesh.util.EtherUtility;
 import io.left.rightmesh.util.MeshUtility;
 import io.left.rightmesh.util.RightMeshException;
 
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -209,7 +210,7 @@ public final class TransactionsManager {
         System.out.println("Checking if Out-Channel " + ownMeshId + "-->" + sourceId + " exists.");
 
         //Check if SuperPeer-->Client exists in the Ether Network.
-        EtherUtility.PaymentChannel outChannel = getChannelFromEtherNetwork(ownMeshId.toString(), sourceId.toString());
+        EtherUtility.PaymentChannel outChannel = getChannelFromEtherNetwork(ownMeshId, sourceId);
         if(outChannel == null) {
 
             System.out.println("Out-Channel doesn't exist, trying to open " + ownMeshId + "-->" + sourceId);
@@ -229,10 +230,18 @@ public final class TransactionsManager {
                 sendTransaction(sourceId, data);
                 return;
             }
-
+            //For a new channel created, we set the balance to be 0 and create the BPS signature.
+            outChannel.setSignaturePair(
+                    meshManager.getTransactionManager().calculateNewBalanceProofToReceiver(
+                            BigInteger.ZERO,sourceId.getRawUuid()));
             System.out.println("Out-Channel OPENED: " + ownMeshId + "-->" + sourceId);
         }
         else {
+            //For now, we have not yet implemented DB to save channel balance.
+            // If a channel is found, we simply rest the balance to be 0 and send back the BPS  again.
+            outChannel.setSignaturePair(
+                    meshManager.getTransactionManager().calculateNewBalanceProofToReceiver(
+                            BigInteger.ZERO,sourceId.getRawUuid()));
             System.out.println("Out-Channel already exist: " + ownMeshId + "-->" + sourceId);
         }
 
@@ -244,7 +253,7 @@ public final class TransactionsManager {
         System.out.println("Checking In-Channel: " + sourceId + "-->" + ownMeshId);
 
         //Check if Client-->SuperPeer channel exists in the Ether Network.
-        EtherUtility.PaymentChannel inChannel = getChannelFromEtherNetwork(sourceId.toString(), ownMeshId.toString());
+        EtherUtility.PaymentChannel inChannel = getChannelFromEtherNetwork(sourceId, ownMeshId);
 
         if (Settings.DEBUG_INFO) {
             System.out.println("Client-->SuperPeer: " + inChannel == null ? "null" : inChannel);
@@ -340,7 +349,7 @@ public final class TransactionsManager {
         }
 
         //Check if already exists in the Ether network.
-        EtherUtility.PaymentChannel inChannel = getChannelFromEtherNetwork(sourceId.toString(), ownMeshId.toString());
+        EtherUtility.PaymentChannel inChannel = getChannelFromEtherNetwork(sourceId, ownMeshId);
         if (inChannel != null) {
 
             System.out.println("Error: In-Channel already exist");
@@ -369,6 +378,11 @@ public final class TransactionsManager {
             sendTransaction(sourceId, data);
             return;
         }
+
+        //For a new channel created, we set the balance to be 0 and create the CHS signature.
+        inChannel.setSignaturePair(
+                meshManager.getTransactionManager().calculateNewClosingHashFromSender(
+                        BigInteger.ZERO,sourceId.getRawUuid()));
 
         System.out.println("In-Channel Opened: " + sourceId + "-->" + ownMeshId);
         System.out.println("Collecting data... ");
@@ -425,15 +439,15 @@ public final class TransactionsManager {
 
     /**
      * Tries to get the payment channel from Ether network.
-     * @param senderAddress The sender address.
-     * @param recvAddress The receiver address.
+     * @param senderID The sender address.
+     * @param receiverID The receiver address.
      * @return The Payment channel if exists in the Ether network, otherwise returns null.
      */
-    private EtherUtility.PaymentChannel getChannelFromEtherNetwork(String senderAddress, String recvAddress) {
+    private EtherUtility.PaymentChannel getChannelFromEtherNetwork(MeshID senderID, MeshID receiverID) {
 
         EtherUtility.PaymentChannel channel;
         try {
-            channel = EtherClient.getChannelInfo(senderAddress, recvAddress, httpAgent);
+            channel = EtherClient.getChannelInfo(senderID.toString(), receiverID.toString(), httpAgent);
         } catch (IOException e) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Failed to execute getChannelInfo request. "
