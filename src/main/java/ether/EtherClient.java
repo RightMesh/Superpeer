@@ -448,6 +448,42 @@ public final class EtherClient {
         return getChannelInfo(senderAddress, receiverAddress, httpAgent);
     }
 
+    public static boolean closeChannel(String senderAddress, String receiverAddress,
+                                                           String signedCloseToSuperTrans, Http httpAgent)
+            throws IOException, IllegalArgumentException {
+
+
+
+        String request = getEtherRequest("eth_sendRawTransaction", signedCloseToSuperTrans);
+
+        System.out.println("Submitting close client to super channel transaction...");
+
+        String transactionId;
+        try {
+            transactionId = (String) httpAgent.getHttpResponse(request);
+        } catch (IOException e) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Fail to execute HTTP request.");
+            }
+            throw e;
+        }
+
+        if (transactionId == null || transactionId.equals("")) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to close channel. " + senderAddress + " --> " + receiverAddress);
+            }
+
+            return false;
+        }
+
+        String blockNumberHex = waitingForTransaction(transactionId, httpAgent);
+        if (Settings.DEBUG_INFO) {
+            System.out.println(senderAddress + " --> " + receiverAddress + " channel has been closed in block "
+                    + new BigInteger(blockNumberHex.substring(2), 16).toString(10));
+        }
+
+        return true;
+    }
 
     /**
      * Closes a payment channel by receiver.

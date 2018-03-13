@@ -1,6 +1,8 @@
 package ether;
 
 import io.left.rightmesh.util.EtherUtility;
+import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.json.simple.JSONObject;
 import java.math.BigInteger;
 
@@ -135,5 +137,44 @@ public final class JSON {
         msg.put("balanceMsgSig", balanceMsgSig);
 
         return msg.toJSONString().getBytes();
+    }
+
+    public static byte[] sendActiveUpdateResponse(ImmutablePair<byte[], BigInteger> closingHashPair,
+                                                  String clientEtherBalance, String clientTokenBalance,
+                                                  BigInteger clientNonce){
+        JSONObject response = new JSONObject();
+        response.put("method", EtherUtility.RES_ACTIVE_UPDATE);
+        response.put("status", "ok");
+        response.put("etherBalance", clientEtherBalance);
+        response.put("tokenBalance", clientTokenBalance);
+        response.put("nonce", clientNonce.toString());
+        response.put("closingHashBalance", closingHashPair.right.toString());
+        response.put("closingHashSignature", Hex.encodeHexString(closingHashPair.left));
+
+        return response.toJSONString().getBytes();
+    }
+
+    public static byte[] sendCloseClientToSuperResponse(String clientEtherBalance, String clientTokenBalance,
+                                                        BigInteger clientNonce){
+        JSONObject response = new JSONObject();
+        response.put("method", EtherUtility.RES_CLOSE_CHANNEL_TO_SUPER_PEER);
+        response.put("status", "ok");
+        response.put("etherBalance", clientEtherBalance);
+        response.put("tokenBalance", clientTokenBalance);
+        response.put("nonce", clientNonce.toString());
+
+        return response.toJSONString().getBytes();
+    }
+
+    public static byte[] sendCloseSuperToClientResponse(String clientEtherBalance, String clientTokenBalance,
+                                                        BigInteger clientNonce){
+        JSONObject response = new JSONObject();
+        response.put("method", EtherUtility.RES_CLOSE_CHANNEL_FROM_SUPER_PEER);
+        response.put("status", "ok");
+        response.put("etherBalance", clientEtherBalance);
+        response.put("tokenBalance", clientTokenBalance);
+        response.put("nonce", clientNonce.toString());
+
+        return response.toJSONString().getBytes();
     }
 }

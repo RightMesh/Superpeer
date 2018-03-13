@@ -30,8 +30,8 @@ applicationDefaultJvmArgs = ["-noverify"]
 buildscript {
     ext {
         //virtualBoxDir = file('build/parity')
-        artifactory_app_username = "username"
-        artifactory_app_password = "password"
+        artifactory_app_username = "zehua-wang"
+        artifactory_app_password = "52be62922e9396b257d8f9bf270e7c6d"
         artifactory_app_key = "app_key"
     }
     repositories {
