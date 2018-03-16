@@ -513,8 +513,8 @@ public final class EtherClient {
 
         CallTransaction.Function func = Settings.CHANNEL_CONTRACT.getByName("cooperativeCloseReceiver");
         byte[] funcBytes = func.encode(senderAddress, balance,
-                balance_Msg_Hash_Sig_r, balance_Msg_Hash_Sig_s, new BigInteger(balance_Msg_Hash_Sig_v),
-                closing_Msg_Hash_Sig_r, closing_Msg_Hash_Sig_s, new BigInteger(closing_Msg_Hash_Sig_v));
+            balance_Msg_Hash_Sig_r, balance_Msg_Hash_Sig_s, new BigInteger(balance_Msg_Hash_Sig_v),
+            closing_Msg_Hash_Sig_r, closing_Msg_Hash_Sig_s, new BigInteger(closing_Msg_Hash_Sig_v));
 
         String funcBytesStr = "0x" + new String(Hex.encodeHex(funcBytes));
         String request = getEtherRequest("eth_estimateGas", sigMeshId.toString(),
