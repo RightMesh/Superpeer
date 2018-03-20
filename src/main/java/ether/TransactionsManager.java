@@ -301,7 +301,6 @@ public final class TransactionsManager {
             System.out.println("In-Channel already exist.");
         }
 
-        System.out.println("Collecting data... ");
 
         //Get client EtherBalance
         String clientEtherBalance;
@@ -339,14 +338,15 @@ public final class TransactionsManager {
             return;
         }
 
-        System.out.println("Remote Peer Ether balance: " + clientEtherBalance);
-        System.out.println("Remote Peer Token balance: " + clientTokenBalance);
-        System.out.println("Remote Peer Nonce: " + clientNonce);
-
         byte[] data = JSON.sendGetAllResponse(outChannel, inChannel, clientEtherBalance, clientTokenBalance, clientNonce);
         sendTransaction(sourceId, data);
-
-        System.out.println("Response sent.");
+        if (Settings.DEBUG_INFO) {
+            System.out.println("Collecting data... ");
+            System.out.println("Remote Peer Ether balance: " + clientEtherBalance);
+            System.out.println("Remote Peer Token balance: " + clientTokenBalance);
+            System.out.println("Remote Peer Nonce: " + clientNonce);
+            System.out.println("Response sent.");
+        }
     }
 
     /**
@@ -356,7 +356,9 @@ public final class TransactionsManager {
      */
     private void processActiveUpdateReq(MeshID sourceId, JSONObject jsonObject) {
 
-        System.out.println("ActiveUpdateRequest received from " + sourceId);
+        if (Settings.DEBUG_INFO){
+            System.out.println("ActiveUpdateRequest received from " + sourceId);
+        }
         Object closingHashBalance = jsonObject.get("closingHashBalance");
         Object closingHashSignature = jsonObject.get("closingHashSignature");
 
@@ -366,7 +368,9 @@ public final class TransactionsManager {
                     =meshManager.getTransactionManager().getMostRecentBillToReceiver(sourceId.getRawUuid()).getRight();
             if(closingHashBalance!=null&&closingHashSignature!=null){
                 BigInteger chb=new BigInteger((String)closingHashBalance);
-                System.out.println("The balance in active update from "+sourceId+" is "+chb);
+                if (Settings.DEBUG_INFO){
+                    System.out.println("The balance in active update from "+sourceId+" is "+chb);
+                }
                 byte[] chs=null;
                 try{
                     chs=Hex.decodeHex(((String)closingHashSignature).toCharArray());
@@ -427,15 +431,14 @@ public final class TransactionsManager {
             return;
         }
 
-        System.out.println("Remote Peer Ether balance: " + clientEtherBalance);
-        System.out.println("Remote Peer Token balance: " + clientTokenBalance);
-        System.out.println("Remote Peer Nonce: " + clientNonce);
-
-
         byte[] data = JSON.sendActiveUpdateResponse(closingHashPairAtReceiver, clientEtherBalance, clientTokenBalance, clientNonce);
         sendTransaction(sourceId, data);
-
-        System.out.println("Response sent.");
+        if (Settings.DEBUG_INFO){
+            System.out.println("Remote Peer Ether balance: " + clientEtherBalance);
+            System.out.println("Remote Peer Token balance: " + clientTokenBalance);
+            System.out.println("Remote Peer Nonce: " + clientNonce);
+            System.out.println("Response sent.");
+        }
     }
 
     /**
