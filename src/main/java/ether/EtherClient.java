@@ -456,7 +456,7 @@ public final class EtherClient {
 
         String request = getEtherRequest("eth_sendRawTransaction", signedCloseToSuperTrans);
 
-        System.out.println("Submitting close client to super channel transaction...");
+        System.out.println("Submitting close channel transaction...");
 
         String transactionId;
         try {

@@ -383,7 +383,7 @@ public final class TransactionsManager {
                 }
             }
         }catch (RightMeshException e){
-            System.out.println("Cannot find a outgoing channel from superpeer to "+sourceId);
+            //System.out.println("Cannot find a outgoing channel from superpeer to "+sourceId);
         }
 
 
