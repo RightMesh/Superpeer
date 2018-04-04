@@ -2,6 +2,12 @@
 
 This minimalist RightMesh "Superpeer" implementation provides two functionalities: enabling the forwarding of data packets from one geographically separate mesh to another, and facilitating transactions involving RightMesh Tokens. The second functionality includes recording transactions to the Ethereum blockchain.
 
+## Running the Superpeer
+
+Superpeer is a Gradle application - it can be built with `gradlew build`, and a binary can be generated with `gradlew installDist`.
+
+If run without arguments Superpeer polls STDIN for input - typing `exit` will shut down RightMesh and stop the application. Unless you are developing/debugging, you will likely want to run Superpeer with the `-h | --headless` flag, which doesn't poll for input and responds to SIGINT signals (e.g. can be killed cleanly with `Ctrl+C` or task managers).
+
 ## Connecting to your Superpeer
 
 By default RightMesh devices with internet connections will connect to a Superpeer operated by RightMesh at `research.rightmesh.io`. In the future the goal is to have a network of Superpeers, with Superpeers implemented and operated by both RightMesh and community members.
@@ -10,7 +16,7 @@ If you would like to have devices use your Superpeer instance for testing, you c
 
 If you would like to send data to a Java application that makes use of RightMesh in a production application, you will need to find out its MeshID and send data to it through the RightMesh library.
 
-## Configuring a New Superpeer
+## Running the Superpeer as a Service
 
 This repo contains everything needed to set up a Superpeer as a service on Ubuntu. These steps will help you get started:
 
