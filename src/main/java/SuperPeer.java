@@ -26,15 +26,19 @@ public class SuperPeer {
     public SuperPeer() {
         mm = new JavaMeshManager(true);
         System.out.println("Superpeer MeshID: " + mm.getUuid());
-        System.out.println("Waiting for lib to be ready");
+        System.out.println("Superpeer is waiting for library ... ");
         try {
             Thread.sleep(200);
         } catch (InterruptedException e) {
         }
-
         tm = TransactionsManager.getInstance(mm);
+        if(tm == null){
+            System.out.println("Failed to get TransactionManager from library. Superpeer is shutting down ...");
+            mm.stop();
+            System.exit(0);
+        }
         tm.start();
-
+        System.out.println("Superpeer is ready!");
         String msg;
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 

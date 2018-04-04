@@ -10,6 +10,8 @@ import io.left.rightmesh.util.EtherUtility;
 import io.left.rightmesh.util.MeshUtility;
 import io.left.rightmesh.util.RightMeshException;
 
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -188,7 +190,15 @@ public final class TransactionsManager {
             case EtherUtility.METHOD_OPEN_CLIENT_TO_SUPER_PEER:
                 processOpenInChannelRequest(event.peerUuid, jsonObject);
                 break;
-
+            case EtherUtility.METHOD_ACTIVE_UPDATE:
+                processActiveUpdateReq(event.peerUuid,jsonObject);
+                break;
+            case EtherUtility.METHOD_CLOSE_CLIENT_TO_SUPERPEER:
+                processCloseClientToSuperpeerReq(event.peerUuid,jsonObject);
+                break;
+            case EtherUtility.METHOD_CLOSE_SUPERPEER_TO_CLIENT:
+                processCloseSuperpeerToClientReq(event.peerUuid,jsonObject);
+                break;
             default:
                 if (Settings.DEBUG_INFO) {
                     System.out.println("default case in processTransaction method.");
@@ -209,7 +219,7 @@ public final class TransactionsManager {
         System.out.println("Checking if Out-Channel " + ownMeshId + "-->" + sourceId + " exists.");
 
         //Check if SuperPeer-->Client exists in the Ether Network.
-        EtherUtility.PaymentChannel outChannel = getChannelFromEtherNetwork(ownMeshId.toString(), sourceId.toString());
+        EtherUtility.PaymentChannel outChannel = getChannelFromEtherNetwork(ownMeshId, sourceId);
         if(outChannel == null) {
 
             System.out.println("Out-Channel doesn't exist, trying to open " + ownMeshId + "-->" + sourceId);
@@ -229,11 +239,31 @@ public final class TransactionsManager {
                 sendTransaction(sourceId, data);
                 return;
             }
-
+            //For a new channel created, we set the balance to be 0 and create the BPS signature.
+            ImmutablePair<byte[], BigInteger> balanceProofPair = meshManager.getTransactionManager()
+                    .calculateNewBalanceProofToReceiver(BigInteger.ZERO,sourceId.getRawUuid());
+            meshManager.getTransactionManager().removeMostRecentBillToReceiver(sourceId);
+            meshManager.getTransactionManager().putNewBalanceProofToReceiver(sourceId.getRawUuid(),balanceProofPair);
+            outChannel.setSignaturePair(balanceProofPair);
             System.out.println("Out-Channel OPENED: " + ownMeshId + "-->" + sourceId);
         }
         else {
-            System.out.println("Out-Channel already exist: " + ownMeshId + "-->" + sourceId);
+            //For now, we have not yet implemented DB to save channel balance. Try to look from memory.
+            ImmutablePair<byte[], BigInteger> balanceProofPair = null;
+            try{
+                ImmutablePair<ImmutablePair<byte[],BigInteger>,ImmutablePair<byte[],BigInteger>>
+                        bill = meshManager.getTransactionManager().getMostRecentBillToReceiver(sourceId.getRawUuid());
+                balanceProofPair=bill.getLeft();
+            }catch (RightMeshException e){
+                //do nothing
+            }
+            if(balanceProofPair==null){
+                balanceProofPair=meshManager.getTransactionManager()
+                        .calculateNewBalanceProofToReceiver(BigInteger.ZERO,sourceId.getRawUuid());
+                meshManager.getTransactionManager().putNewBalanceProofToReceiver(sourceId.getRawUuid(),balanceProofPair);
+            }
+            outChannel.setSignaturePair(balanceProofPair);
+            System.out.println("Out-Channel already exist " + ownMeshId + "-->" + sourceId);
         }
 
 
@@ -244,7 +274,7 @@ public final class TransactionsManager {
         System.out.println("Checking In-Channel: " + sourceId + "-->" + ownMeshId);
 
         //Check if Client-->SuperPeer channel exists in the Ether Network.
-        EtherUtility.PaymentChannel inChannel = getChannelFromEtherNetwork(sourceId.toString(), ownMeshId.toString());
+        EtherUtility.PaymentChannel inChannel = getChannelFromEtherNetwork(sourceId, ownMeshId);
 
         if (Settings.DEBUG_INFO) {
             System.out.println("Client-->SuperPeer: " + inChannel == null ? "null" : inChannel);
@@ -254,10 +284,23 @@ public final class TransactionsManager {
             System.out.println("In-Channel doesn't exist");
         }
         else {
+            ImmutablePair<byte[], BigInteger> closingHashPair = null;
+            try{
+                ImmutablePair<ImmutablePair<byte[],BigInteger>,ImmutablePair<byte[],BigInteger>>
+                        bill = meshManager.getTransactionManager().getMostRecentBillFromSender(sourceId.getRawUuid());
+                closingHashPair=bill.getRight();
+            }catch (RightMeshException e){
+                //do nothing
+            }
+            if(closingHashPair==null){
+                closingHashPair=meshManager.getTransactionManager()
+                        .calculateNewClosingHashFromSender(BigInteger.ZERO,sourceId.getRawUuid());
+                meshManager.getTransactionManager().putNewClosingHashFromSender(sourceId.getRawUuid(),closingHashPair);
+            }
+            inChannel.setSignaturePair(closingHashPair);
             System.out.println("In-Channel already exist.");
         }
 
-        System.out.println("Collecting data... ");
 
         //Get client EtherBalance
         String clientEtherBalance;
@@ -295,14 +338,107 @@ public final class TransactionsManager {
             return;
         }
 
-        System.out.println("Remote Peer Ether balance: " + clientEtherBalance);
-        System.out.println("Remote Peer Token balance: " + clientTokenBalance);
-        System.out.println("Remote Peer Nonce: " + clientNonce);
-
         byte[] data = JSON.sendGetAllResponse(outChannel, inChannel, clientEtherBalance, clientTokenBalance, clientNonce);
         sendTransaction(sourceId, data);
+        if (Settings.DEBUG_INFO) {
+            System.out.println("Collecting data... ");
+            System.out.println("Remote Peer Ether balance: " + clientEtherBalance);
+            System.out.println("Remote Peer Token balance: " + clientTokenBalance);
+            System.out.println("Remote Peer Nonce: " + clientNonce);
+            System.out.println("Response sent.");
+        }
+    }
 
-        System.out.println("Response sent.");
+    /**
+     * Processes the Get All request from Client-Remote Peer
+     *
+     * @param sourceId  The source id.
+     */
+    private void processActiveUpdateReq(MeshID sourceId, JSONObject jsonObject) {
+
+        if (Settings.DEBUG_INFO){
+            System.out.println("ActiveUpdateRequest received from " + sourceId);
+        }
+        Object closingHashBalance = jsonObject.get("closingHashBalance");
+        Object closingHashSignature = jsonObject.get("closingHashSignature");
+
+        ImmutablePair<byte[], BigInteger> closingHashPairAtSender=null;
+        try{
+            closingHashPairAtSender
+                    =meshManager.getTransactionManager().getMostRecentBillToReceiver(sourceId.getRawUuid()).getRight();
+            if(closingHashBalance!=null&&closingHashSignature!=null){
+                BigInteger chb=new BigInteger((String)closingHashBalance);
+                if (Settings.DEBUG_INFO){
+                    System.out.println("The balance in active update from "+sourceId+" is "+chb);
+                }
+                byte[] chs=null;
+                try{
+                    chs=Hex.decodeHex(((String)closingHashSignature).toCharArray());
+                }catch(DecoderException e){
+                    //do nothing;
+                }
+                if(chb!=null&&chs!=null&&(chb.compareTo(closingHashPairAtSender.right)>0)){
+                    meshManager.getTransactionManager().putNewClosingHashToReceiver(
+                            sourceId.getRawUuid(),new ImmutablePair(chs,chb));
+                }
+            }
+        }catch (RightMeshException e){
+            //System.out.println("Cannot find a outgoing channel from superpeer to "+sourceId);
+        }
+
+
+        ImmutablePair<byte[], BigInteger> closingHashPairAtReceiver=null;
+        try{
+            closingHashPairAtReceiver
+                    =meshManager.getTransactionManager().getMostRecentBillFromSender(sourceId.getRawUuid()).getRight();
+        }catch (RightMeshException e){
+            //do nothing
+        }
+
+
+        String clientEtherBalance;
+        try {
+            clientEtherBalance = EtherClient.getEtherBalance(sourceId.toString(), httpAgent).toString();
+        } catch (IOException | NumberFormatException e) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get Ether balance for: " + sourceId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_GET_ALL, "Failed to get Ether balance.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        //Get client Token balance
+        String clientTokenBalance;
+        try {
+            clientTokenBalance = EtherClient.getTokenBalance(sourceId.toString(), httpAgent).toString();
+        } catch (IOException | NumberFormatException e) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get Token balance for: " + sourceId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_GET_ALL, "Failed to get Token balance.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        BigInteger clientNonce = EtherClient.getNonce(sourceId.toString(), httpAgent);
+        if (clientNonce == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get nonce for: " + sourceId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_GET_ALL, "Failed to get nonce.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        byte[] data = JSON.sendActiveUpdateResponse(closingHashPairAtReceiver, clientEtherBalance, clientTokenBalance, clientNonce);
+        sendTransaction(sourceId, data);
+        if (Settings.DEBUG_INFO){
+            System.out.println("Remote Peer Ether balance: " + clientEtherBalance);
+            System.out.println("Remote Peer Token balance: " + clientTokenBalance);
+            System.out.println("Remote Peer Nonce: " + clientNonce);
+            System.out.println("Response sent.");
+        }
     }
 
     /**
@@ -339,8 +475,26 @@ public final class TransactionsManager {
             return;
         }
 
+        Object signature = jsonObject.get("zeroBalanceProofSignature");
+        if (signature == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("No zeroBalanceProofSignature.");
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
+                    "No zeroBalanceProofSignature.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+        byte [] zeroBalanceProofSignature=null;
+        try{
+            zeroBalanceProofSignature=Hex.decodeHex(((String)signature).toCharArray());
+        }catch (DecoderException e){
+            System.out.println("Signature in process open channel cannot be decoded.");
+        }
+
+
         //Check if already exists in the Ether network.
-        EtherUtility.PaymentChannel inChannel = getChannelFromEtherNetwork(sourceId.toString(), ownMeshId.toString());
+        EtherUtility.PaymentChannel inChannel = getChannelFromEtherNetwork(sourceId, ownMeshId);
         if (inChannel != null) {
 
             System.out.println("Error: In-Channel already exist");
@@ -369,6 +523,14 @@ public final class TransactionsManager {
             sendTransaction(sourceId, data);
             return;
         }
+
+        //For a new channel created, we set the balance to be 0 and create the CHS signature.
+        ImmutablePair<byte[], BigInteger> closingHashPair =meshManager.getTransactionManager()
+                .calculateNewClosingHashFromSender(BigInteger.ZERO,sourceId.getRawUuid());
+        meshManager.getTransactionManager().removeMostRecentBillFromSender(sourceId);
+        meshManager.getTransactionManager().putNewClosingHashFromSender(sourceId.getRawUuid(),closingHashPair);
+        meshManager.getTransactionManager().putNewBalanceProofFromSender(sourceId.getRawUuid(),new ImmutablePair<>(zeroBalanceProofSignature,BigInteger.ZERO));
+        inChannel.setSignaturePair(closingHashPair);
 
         System.out.println("In-Channel Opened: " + sourceId + "-->" + ownMeshId);
         System.out.println("Collecting data... ");
@@ -423,17 +585,211 @@ public final class TransactionsManager {
         System.out.println("Response sent.");
     }
 
+    private void processCloseClientToSuperpeerReq(MeshID sourceId, JSONObject jsonObject){
+        System.out.println("Close client to superpeer request is received from " + sourceId);
+
+        Object signedCloseClientToSuperTransaction = jsonObject.get("closeClientToSuperSig");
+        if (signedCloseClientToSuperTransaction == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("No signed close to superpeer channel transaction in the request from client.");
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_CLOSE_CHANNEL_TO_SUPER_PEER,
+                    "No signed transaction.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        System.out.println("Checking if In-Channel " + sourceId + "-->" + ownMeshId + " exists.");
+
+        //Check if already exists in the Ether network.
+        EtherUtility.PaymentChannel inChannel = getChannelFromEtherNetwork(sourceId, ownMeshId);
+        if(inChannel == null) {
+
+            System.out.println("Error: Channel from "+sourceId+" to superpeer does not exist");
+
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_CLOSE_CHANNEL_TO_SUPER_PEER,
+                    "Not channel found.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        boolean result;
+        try{
+            result=EtherClient.closeChannel(sourceId.toString(),ownMeshId.toString(),(String)signedCloseClientToSuperTransaction,httpAgent);
+        }catch (IOException | IllegalArgumentException e){
+            result =false;
+        }
+
+
+        if(!result){
+
+            System.out.println("Failed to close client to superpeer channel: " + sourceId + "-->" + ownMeshId);
+
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_CLOSE_CHANNEL_TO_SUPER_PEER,
+                    "Failed close channel Client-->SuperPeer.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        meshManager.getTransactionManager().removeMostRecentBillFromSender(sourceId);
+
+        String clientEtherBalance;
+        try {
+            clientEtherBalance = EtherClient.getEtherBalance(sourceId.toString(), httpAgent).toString();
+        } catch (IOException | NumberFormatException e) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get Ether balance for: " + sourceId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_CLOSE_CHANNEL_TO_SUPER_PEER,
+                    "Failed to get Ether balance.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        //Get client Token balance
+        String clientTokenBalance;
+        try {
+            clientTokenBalance = EtherClient.getTokenBalance(sourceId.toString(), httpAgent).toString();
+        } catch (IOException | NumberFormatException e) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get Token balance for: " + sourceId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_CLOSE_CHANNEL_TO_SUPER_PEER,
+                    "Failed to get Token balance.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        BigInteger clientNonce = EtherClient.getNonce(sourceId.toString(), httpAgent);
+        if (clientNonce == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get nonce for: " + sourceId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER,
+                    "Failed to get nonce.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+
+        System.out.println("Remote Peer Ether balance: " + clientEtherBalance);
+        System.out.println("Remote Peer Token balance: " + clientTokenBalance);
+        System.out.println("Remote Peer Nonce: " + clientNonce);
+
+        byte[] data = JSON.sendCloseClientToSuperResponse(clientEtherBalance, clientTokenBalance, clientNonce);
+        sendTransaction(sourceId, data);
+
+        System.out.println("Response sent.");
+    }
+
+    private void processCloseSuperpeerToClientReq(MeshID sourceId, JSONObject jsonObject){
+        System.out.println("Close superpeer to client request is received from " + sourceId);
+
+        Object signedCloseSuperToClientTransaction = jsonObject.get("closeSuperToClientSig");
+        if (signedCloseSuperToClientTransaction == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("No signed close from superpeer channel transaction in the request from client.");
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_CLOSE_CHANNEL_FROM_SUPER_PEER,
+                    "No signed transaction.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        System.out.println("Checking if Out-Channel " + ownMeshId + "-->" + sourceId + " exists.");
+
+        //Check if already exists in the Ether network.
+        EtherUtility.PaymentChannel outChannel = getChannelFromEtherNetwork(ownMeshId,sourceId);
+        if(outChannel == null) {
+
+            System.out.println("Error: Channel from "+sourceId+" to superpeer does not exist");
+
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_CLOSE_CHANNEL_FROM_SUPER_PEER,
+                    "Not channel found.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        boolean result;
+        try{
+            result=EtherClient.closeChannel(ownMeshId.toString(), sourceId.toString(),(String)signedCloseSuperToClientTransaction,httpAgent);
+        }catch (IOException | IllegalArgumentException e){
+            result =false;
+        }
+
+
+        if(!result){
+
+            System.out.println("Failed to close superpeer to client channel: " + ownMeshId + "-->" + sourceId);
+
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_CLOSE_CHANNEL_FROM_SUPER_PEER,
+                    "Failed close channel Client-->SuperPeer.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        meshManager.getTransactionManager().removeMostRecentBillToReceiver(sourceId);
+
+        String clientEtherBalance;
+        try {
+            clientEtherBalance = EtherClient.getEtherBalance(sourceId.toString(), httpAgent).toString();
+        } catch (IOException | NumberFormatException e) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get Ether balance for: " + sourceId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_CLOSE_CHANNEL_FROM_SUPER_PEER,
+                    "Failed to get Ether balance.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        //Get client Token balance
+        String clientTokenBalance;
+        try {
+            clientTokenBalance = EtherClient.getTokenBalance(sourceId.toString(), httpAgent).toString();
+        } catch (IOException | NumberFormatException e) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get Token balance for: " + sourceId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_CLOSE_CHANNEL_FROM_SUPER_PEER,
+                    "Failed to get Token balance.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+        BigInteger clientNonce = EtherClient.getNonce(sourceId.toString(), httpAgent);
+        if (clientNonce == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get nonce for: " + sourceId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_CLOSE_CHANNEL_FROM_SUPER_PEER,
+                    "Failed to get nonce.");
+            sendTransaction(sourceId, data);
+            return;
+        }
+
+
+        System.out.println("Remote Peer Ether balance: " + clientEtherBalance);
+        System.out.println("Remote Peer Token balance: " + clientTokenBalance);
+        System.out.println("Remote Peer Nonce: " + clientNonce);
+
+        byte[] data = JSON.sendCloseSuperToClientResponse(clientEtherBalance, clientTokenBalance, clientNonce);
+        sendTransaction(sourceId, data);
+
+        System.out.println("Response sent.");
+    }
+
     /**
      * Tries to get the payment channel from Ether network.
-     * @param senderAddress The sender address.
-     * @param recvAddress The receiver address.
+     * @param senderID The sender address.
+     * @param receiverID The receiver address.
      * @return The Payment channel if exists in the Ether network, otherwise returns null.
      */
-    private EtherUtility.PaymentChannel getChannelFromEtherNetwork(String senderAddress, String recvAddress) {
+    private EtherUtility.PaymentChannel getChannelFromEtherNetwork(MeshID senderID, MeshID receiverID) {
 
         EtherUtility.PaymentChannel channel;
         try {
-            channel = EtherClient.getChannelInfo(senderAddress, recvAddress, httpAgent);
+            channel = EtherClient.getChannelInfo(senderID.toString(), receiverID.toString(), httpAgent);
         } catch (IOException e) {
             if (Settings.DEBUG_INFO) {
                 System.out.println("Failed to execute getChannelInfo request. "
@@ -677,6 +1033,7 @@ public final class TransactionsManager {
             if(balanceProofSig.right.equals(closingSig.right)) {
                 if(EtherClient.cooperativeCloseReceiver(ownMeshId, remotePeerAddress, closingSig.right,
                        balanceProofSig.left, closingSig.left, httpAgent)) {
+                    meshManager.getTransactionManager().removeMostRecentBillFromSender(remotePeerMeshId);
                     System.out.println("In-Channel has been closed: " + remotePeerAddress + " --> " + ownMeshId);
                 } else {
                     System.out.println("Failed to close In-Channel: " + remotePeerAddress + " --> " + ownMeshId);
@@ -701,7 +1058,7 @@ public final class TransactionsManager {
 
         if(bill != null) {
             //Out-Channel exist, lets try to close it.
-            System.out.println(remotePeerAddress + " --> " + ownMeshId
+            System.out.println( ownMeshId + " --> " + remotePeerAddress
                     + " bill to receiver found, trying to close this channel...");
 
             ImmutablePair<byte[], BigInteger> balanceProofSig = bill.getLeft();
@@ -713,8 +1070,8 @@ public final class TransactionsManager {
             if(!balanceProofSig.right.equals(closingSig.right)) {
                 if (Settings.DEBUG_INFO) {
                     System.out.println("Error closing Out-Channel: "
-                            + "balance in BalanceProofSig not equal to balance in ClosingSig."
-                            + "This, currently could happen in the Out-Channel.");
+                            + "balance in BalanceProofSig: "+balanceProofSig.right+" not equal to balance in ClosingSig: "+closingSig.right
+                            + ". This, currently could happen in the Out-Channel.");
 
                     System.out.println("Regenerating BalanceProof for balance: " + balanceProofSig.right);
                 }
@@ -727,6 +1084,7 @@ public final class TransactionsManager {
             if(balanceProofSig.right.equals(closingSig.right)) {
                 if(EtherClient.cooperativeCloseSender(ownMeshId, remotePeerAddress, closingSig.right,
                         balanceProofSig.left, closingSig.left, httpAgent)) {
+                    meshManager.getTransactionManager().removeMostRecentBillToReceiver(remotePeerMeshId);
                     System.out.println("Out-Channel has been closed: " + ownMeshId + " --> " + remotePeerAddress);
                 } else {
                     System.out.println("Failed to close Out-Channel: " + ownMeshId
@@ -739,6 +1097,59 @@ public final class TransactionsManager {
                 }
             }
         }
+
+        boolean hasInChannel=false;
+        boolean hasOutChannel=false;
+        try {
+            meshManager.getTransactionManager().getMostRecentBillToReceiver(remotePeerMeshId.getRawUuid());
+            hasOutChannel=true;
+        } catch (RightMeshException e){
+            //do nothing
+        }
+        try {
+            meshManager.getTransactionManager().getMostRecentBillFromSender(remotePeerMeshId.getRawUuid());
+            hasInChannel=true;
+        } catch (RightMeshException e){
+            //do nothing
+        }
+        String clientEtherBalance;
+        try {
+            clientEtherBalance = EtherClient.getEtherBalance(remotePeerMeshId.toString(), httpAgent).toString();
+        } catch (IOException | NumberFormatException e) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get Ether balance for: " + remotePeerMeshId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_GET_ALL, "Failed to get Ether balance.");
+            sendTransaction(remotePeerMeshId, data);
+            return;
+        }
+
+        //Get client Token balance
+        String clientTokenBalance;
+        try {
+            clientTokenBalance = EtherClient.getTokenBalance(remotePeerMeshId.toString(), httpAgent).toString();
+        } catch (IOException | NumberFormatException e) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get Token balance for: " + remotePeerMeshId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_GET_ALL, "Failed to get Token balance.");
+            sendTransaction(remotePeerMeshId, data);
+            return;
+        }
+
+        BigInteger clientNonce = EtherClient.getNonce(remotePeerMeshId.toString(), httpAgent);
+        if (clientNonce == null) {
+            if (Settings.DEBUG_INFO) {
+                System.out.println("Failed to get nonce for: " + remotePeerMeshId);
+            }
+            byte[] data = JSON.getErrorResponse(EtherUtility.RES_GET_ALL, "Failed to get nonce.");
+            sendTransaction(remotePeerMeshId, data);
+            return;
+        }
+        String channelStatusCode=new String(hasOutChannel?"1":"0")+new String(hasInChannel?"1":"0");
+        byte[] data=JSON.getMessageToClient(channelStatusCode,clientEtherBalance,clientTokenBalance,clientNonce);
+        sendTransaction(remotePeerMeshId,data);
+
     }
 
 

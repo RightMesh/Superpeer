@@ -1,6 +1,9 @@
 package ether;
 
 import io.left.rightmesh.util.EtherUtility;
+import io.reactivex.internal.util.BlockingIgnoringReceiver;
+import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.json.simple.JSONObject;
 import java.math.BigInteger;
 
@@ -43,6 +46,30 @@ public final class JSON {
         return response.toJSONString().getBytes();
     }
 
+    /**
+     * Sends message to client.
+     *
+     * @param channelStatusCode the two digits binary code represents if there is a channel from superpeer to client
+     *                          (1, if yes; 0, otherwise) and if there is a channel from client to superpeer
+     *                          (1, if yes; 0, otherwise).
+     * @param etherBalance             The Ether balance of the Client.
+     * @param tokenBalance             The Tokens balance of the Client.
+     * @param nonce                    The nonce of the Client.
+     * @return        The byte array.
+     */
+    public static byte[] getMessageToClient(String channelStatusCode,
+                                            String etherBalance,
+                                            String tokenBalance,
+                                            BigInteger nonce) {
+        JSONObject response = new JSONObject();
+        response.put("resMethod", EtherUtility.MESSAGE_TO_CLIENT);
+        response.put("channelCode",channelStatusCode);
+        response.put("etherBalance", etherBalance);
+        response.put("tokenBalance", tokenBalance);
+        response.put("nonce", nonce.toString());
+
+        return response.toJSONString().getBytes();
+    }
 
     /**
      * Sends response to getAll request.
@@ -135,5 +162,46 @@ public final class JSON {
         msg.put("balanceMsgSig", balanceMsgSig);
 
         return msg.toJSONString().getBytes();
+    }
+
+    public static byte[] sendActiveUpdateResponse(ImmutablePair<byte[], BigInteger> closingHashPair,
+                                                  String clientEtherBalance, String clientTokenBalance,
+                                                  BigInteger clientNonce){
+        JSONObject response = new JSONObject();
+        response.put("method", EtherUtility.RES_ACTIVE_UPDATE);
+        response.put("status", "ok");
+        response.put("etherBalance", clientEtherBalance);
+        response.put("tokenBalance", clientTokenBalance);
+        response.put("nonce", clientNonce.toString());
+        if(closingHashPair!=null){
+            response.put("closingHashBalance", closingHashPair.right.toString());
+            response.put("closingHashSignature", Hex.encodeHexString(closingHashPair.left));
+        }
+
+        return response.toJSONString().getBytes();
+    }
+
+    public static byte[] sendCloseClientToSuperResponse(String clientEtherBalance, String clientTokenBalance,
+                                                        BigInteger clientNonce){
+        JSONObject response = new JSONObject();
+        response.put("method", EtherUtility.RES_CLOSE_CHANNEL_TO_SUPER_PEER);
+        response.put("status", "ok");
+        response.put("etherBalance", clientEtherBalance);
+        response.put("tokenBalance", clientTokenBalance);
+        response.put("nonce", clientNonce.toString());
+
+        return response.toJSONString().getBytes();
+    }
+
+    public static byte[] sendCloseSuperToClientResponse(String clientEtherBalance, String clientTokenBalance,
+                                                        BigInteger clientNonce){
+        JSONObject response = new JSONObject();
+        response.put("method", EtherUtility.RES_CLOSE_CHANNEL_FROM_SUPER_PEER);
+        response.put("status", "ok");
+        response.put("etherBalance", clientEtherBalance);
+        response.put("tokenBalance", clientTokenBalance);
+        response.put("nonce", clientNonce.toString());
+
+        return response.toJSONString().getBytes();
     }
 }
