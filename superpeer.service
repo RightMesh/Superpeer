@@ -1,0 +1,5 @@
+[Unit]
+Description=RightMesh Superpeer
+[Service]
+ExecStart=/home/ubuntu/Superpeer/build/install/Superpeer/bin/Superpeer --headless
+User=ubuntu
