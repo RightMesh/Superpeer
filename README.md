@@ -1,63 +1,73 @@
-# Superpeer
-This minimalist RM superpeer provides one very simple function right 
-now, which is to enable the forwarding of data packets from one
-geographically separate mesh to another. The only call required from the
-developer is during construction of the JavaMeshManager. Rather than
-starting with no parameters, the developer should pass the value `true`
-which sets the device into `superpeer` mode.
+# RightMesh Superpeer
 
-Currently, RM is set by default to use superpeers which we operate at
-`research.rightmesh.io`, however a developer may wish to operate their
-own superpeer as well if they wish to connect a mesh app on phones to
-their own app superpeer. This would be useful for example, if
-developers wanted to visualize data coming from the mesh using a
-traditional website, or create some interaction between the web and the
-mesh.
+This minimalist RightMesh "Superpeer" implementation provides two functionalities: enabling the forwarding of data packets from one geographically separate mesh to another, and facilitating transactions involving RightMesh Tokens. The second functionality includes recording transactions to the Ethereum blockchain.
 
-In this case, they can use the developer
-library and set the superpeer themselves with the mm.setSuperPeer
-function (and pass the IP address or hostname of the superpeer).
+## Connecting to your Superpeer
 
-In the longer term, the production library will not support this
-function, however, developers will be able to determine the MeshID of
-their superpeer(s) and use those to let the Mesh determine the best way
-to reach the superpeer(s).
+By default RightMesh devices with internet connections will connect to a Superpeer operated by RightMesh at `research.rightmesh.io`. In the future the goal is to have a network of Superpeers, with Superpeers implemented and operated by both RightMesh and community members.
 
-Don't forget when you clone the repo to update your credentials from 
-[https://developer.rightmesh.io] in the [build.gradle](build.gradle) 
-file.
+If you would like to have devices use your Superpeer instance for testing, you can hard-code its address into a RightMesh application to make it use your instance instead of the production network. You can do this by passing the address as a parameter to a special MeshManager constructor that is available in the developer version of the library. Note that this will never be an option in production - all RightMesh applications will use the same network, so that the owner of the device can specify their preferences for where/when/how to connect to Superpeers.
 
-# Setting up
-If you want to run the parity client directly, run the `configure.sh`
-script. This will install parity from .deb (along with all dependencies)
+If you would like to send data to a Java application that makes use of RightMesh in a production application, you will need to find out its MeshID and send data to it through the RightMesh library.
+
+## Configuring a New Superpeer
+
+This repo contains everything needed to set up a Superpeer as a service on Ubuntu. These steps will help you get started:
+
+1. Set up an Amazon EC2 Instance running Ubuntu
+    - A Micro instance is fine, or any other Ubuntu server
+    - Make sure port 22/TCP is open for SSH, 40,000/UDP for the Superpeer, and both 30303/TCP and 30303/UDP for Parity to communicate with the Ethereum network.
+2. SSH Into the server.
+    - `ssh ubuntu@your.ip.address.here`
+3. Install Java
+    - `sudo add-apt-repository ppa:webupd8team/java`
+    - `sudo apt-get update`
+    - `sudo apt-get install oracle-java8-installer`
+4. Clone the Superpeer repository and navigate to the directory.
+    - `git clone https://github.com/rightmesh/superpeer`
+    - `cd superpeer`
+5. Update build.gradle with your credentials from the [RightMesh developer portal](https://developer.rightmesh.io/keys/).
+6. Install and configure Parity
+    - `./configure.sh`
+    - To verify parity is running:
+    - `ps ax | grep parity`
+7. Compile against the latest library version
+    - `./gradlew build --refresh-dependencies`
+8. Build the Superpeer binary.
+    - `./gradlew installDist`
+9. Copy the systemctl unit to the proper directory.
+    - _Note: if you cloned the Superpeer repo anywhere other than `/home/ubuntu/superpper` you will need to update the file first with the correct path._
+    - `sudo cp superpeer.service /etc/systemd/system/`
+10. Enable the superpeer systemctl unit
+    - `sudo systemctl enable superpeer`
+
+## Interacting with a Superpeer
+
+Once the Superpeer is registered as a systemctl unit, it can be started, stopped and otherwise manipulated through systemctl. The commands are straightforward:
+
+- To start the Superpeer:
+    - `sudo systemctl start superpeer`
+- To stop the Superpeer:
+    - `sudo systemctl stop superpeer`
+- And to restart the Superpeer:
+    - `sudo systemctl restart superpeer`
+
+STDIN is automatically captured and stored by Systemctl. The logs can be viewed and filtered using the journalctl command.
+
+- To view the logs from the beginning:
+    - `sudo journalctl -u superpeer.service`
+- To tail the logs:
+    - `sudo journalctl -u superpeer.service -fe`
+
+
+## Running Parity
+
+If you want to run the Parity client directly, run the `configure.sh`
+script. This will install Parity from .deb (along with all dependencies)
 and start it up.
 
 Otherwise you can uncomment the last few lines in the 
-build.gradle script to run parity in vagrant. If you wish to run it
-in vagrant, you'll need to install vagrant and virtualbox. This will
-install the parity wallet within the vm so you don't accidentally
+build.gradle script to run Parity in Vagrant. If you wish to run it
+in Vagrant, you'll need to install Vagrant and VirtualBox. This will
+install the Parity wallet within the virtual machine so you don't accidentally
 clobber your local wallet.
-
-Todo: detect in gradle or use a set variable to specify whether we are
-running on a local machine or AWS instance. Also add an option to set
-a remote parity machine (if the superpeer wants to separate funciton).
-
-# Steps to run on AWS
-Install and get parity running
-`./configure.sh`
-
-Verify parity is running:
-`ps ax | grep parity`
-
-Compile against the latest library version
-`./gradlew build --refresh-dependencies`
-
-Create the binary to run the superpeer
-`./gradlew installDist`
-
-Run the superpeer
-`./build/install/Superpeer/bin/Superpeer`
-
-In your app, make sure you set the superpeer to the IP address of the AWS
-instance:
-`mm.setSuperPeer("IP");`
