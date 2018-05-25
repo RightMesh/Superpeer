@@ -2,7 +2,7 @@ package ether;
 
 import static io.left.rightmesh.mesh.MeshManager.TRANSACTION_RECEIVED;
 
-import io.left.rightmesh.id.MeshID;
+import io.left.rightmesh.id.MeshId;
 import io.left.rightmesh.mesh.JavaMeshManager;
 import io.left.rightmesh.mesh.MeshManager;
 import io.left.rightmesh.proto.MeshTransaction;
@@ -32,7 +32,7 @@ public final class TransactionsManager {
     private Thread queueThread = null;
     private volatile boolean isRunning = false;
     private Http httpAgent;
-    private MeshID ownMeshId;
+    private MeshId ownMeshId;
 
 
     private static volatile TransactionsManager instance = null;
@@ -213,7 +213,7 @@ public final class TransactionsManager {
      *
      * @param sourceId  The source id.
      */
-    private void processGetAllRequest(MeshID sourceId) {
+    private void processGetAllRequest(MeshId sourceId) {
 
         System.out.println("GetAll received from " + sourceId);
         System.out.println("Checking if Out-Channel " + ownMeshId + "-->" + sourceId + " exists.");
@@ -241,9 +241,9 @@ public final class TransactionsManager {
             }
             //For a new channel created, we set the balance to be 0 and create the BPS signature.
             ImmutablePair<byte[], BigInteger> balanceProofPair = meshManager.getTransactionManager()
-                    .calculateNewBalanceProofToReceiver(BigInteger.ZERO,sourceId.getRawUuid());
+                    .calculateNewBalanceProofToReceiver(BigInteger.ZERO,sourceId.getRawMeshId());
             meshManager.getTransactionManager().removeMostRecentBillToReceiver(sourceId);
-            meshManager.getTransactionManager().putNewBalanceProofToReceiver(sourceId.getRawUuid(),balanceProofPair);
+            meshManager.getTransactionManager().putNewBalanceProofToReceiver(sourceId.getRawMeshId(),balanceProofPair);
             outChannel.setSignaturePair(balanceProofPair);
             System.out.println("Out-Channel OPENED: " + ownMeshId + "-->" + sourceId);
         }
@@ -252,15 +252,15 @@ public final class TransactionsManager {
             ImmutablePair<byte[], BigInteger> balanceProofPair = null;
             try{
                 ImmutablePair<ImmutablePair<byte[],BigInteger>,ImmutablePair<byte[],BigInteger>>
-                        bill = meshManager.getTransactionManager().getMostRecentBillToReceiver(sourceId.getRawUuid());
+                        bill = meshManager.getTransactionManager().getMostRecentBillToReceiver(sourceId.getRawMeshId());
                 balanceProofPair=bill.getLeft();
             }catch (RightMeshException e){
                 //do nothing
             }
             if(balanceProofPair==null){
                 balanceProofPair=meshManager.getTransactionManager()
-                        .calculateNewBalanceProofToReceiver(BigInteger.ZERO,sourceId.getRawUuid());
-                meshManager.getTransactionManager().putNewBalanceProofToReceiver(sourceId.getRawUuid(),balanceProofPair);
+                        .calculateNewBalanceProofToReceiver(BigInteger.ZERO,sourceId.getRawMeshId());
+                meshManager.getTransactionManager().putNewBalanceProofToReceiver(sourceId.getRawMeshId(),balanceProofPair);
             }
             outChannel.setSignaturePair(balanceProofPair);
             System.out.println("Out-Channel already exist " + ownMeshId + "-->" + sourceId);
@@ -287,15 +287,15 @@ public final class TransactionsManager {
             ImmutablePair<byte[], BigInteger> closingHashPair = null;
             try{
                 ImmutablePair<ImmutablePair<byte[],BigInteger>,ImmutablePair<byte[],BigInteger>>
-                        bill = meshManager.getTransactionManager().getMostRecentBillFromSender(sourceId.getRawUuid());
+                        bill = meshManager.getTransactionManager().getMostRecentBillFromSender(sourceId.getRawMeshId());
                 closingHashPair=bill.getRight();
             }catch (RightMeshException e){
                 //do nothing
             }
             if(closingHashPair==null){
                 closingHashPair=meshManager.getTransactionManager()
-                        .calculateNewClosingHashFromSender(BigInteger.ZERO,sourceId.getRawUuid());
-                meshManager.getTransactionManager().putNewClosingHashFromSender(sourceId.getRawUuid(),closingHashPair);
+                        .calculateNewClosingHashFromSender(BigInteger.ZERO,sourceId.getRawMeshId());
+                meshManager.getTransactionManager().putNewClosingHashFromSender(sourceId.getRawMeshId(),closingHashPair);
             }
             inChannel.setSignaturePair(closingHashPair);
             System.out.println("In-Channel already exist.");
@@ -354,7 +354,7 @@ public final class TransactionsManager {
      *
      * @param sourceId  The source id.
      */
-    private void processActiveUpdateReq(MeshID sourceId, JSONObject jsonObject) {
+    private void processActiveUpdateReq(MeshId sourceId, JSONObject jsonObject) {
 
         if (Settings.DEBUG_INFO){
             System.out.println("ActiveUpdateRequest received from " + sourceId);
@@ -365,7 +365,7 @@ public final class TransactionsManager {
         ImmutablePair<byte[], BigInteger> closingHashPairAtSender=null;
         try{
             closingHashPairAtSender
-                    =meshManager.getTransactionManager().getMostRecentBillToReceiver(sourceId.getRawUuid()).getRight();
+                    =meshManager.getTransactionManager().getMostRecentBillToReceiver(sourceId.getRawMeshId()).getRight();
             if(closingHashBalance!=null&&closingHashSignature!=null){
                 BigInteger chb=new BigInteger((String)closingHashBalance);
                 if (Settings.DEBUG_INFO){
@@ -379,7 +379,7 @@ public final class TransactionsManager {
                 }
                 if(chb!=null&&chs!=null&&(chb.compareTo(closingHashPairAtSender.right)>0)){
                     meshManager.getTransactionManager().putNewClosingHashToReceiver(
-                            sourceId.getRawUuid(),new ImmutablePair(chs,chb));
+                            sourceId.getRawMeshId(),new ImmutablePair(chs,chb));
                 }
             }
         }catch (RightMeshException e){
@@ -390,7 +390,7 @@ public final class TransactionsManager {
         ImmutablePair<byte[], BigInteger> closingHashPairAtReceiver=null;
         try{
             closingHashPairAtReceiver
-                    =meshManager.getTransactionManager().getMostRecentBillFromSender(sourceId.getRawUuid()).getRight();
+                    =meshManager.getTransactionManager().getMostRecentBillFromSender(sourceId.getRawMeshId()).getRight();
         }catch (RightMeshException e){
             //do nothing
         }
@@ -447,7 +447,7 @@ public final class TransactionsManager {
      * @param sourceId      The MeshId of the remote peer.
      * @param jsonObject    The Transaction data.
      */
-    private void processOpenInChannelRequest(MeshID sourceId, JSONObject jsonObject) {
+    private void processOpenInChannelRequest(MeshId sourceId, JSONObject jsonObject) {
 
         System.out.println("Open In-Channel received from " + sourceId);
         System.out.println("Checking if In-Channel " + sourceId + "-->" + ownMeshId + " exists.");
@@ -526,10 +526,10 @@ public final class TransactionsManager {
 
         //For a new channel created, we set the balance to be 0 and create the CHS signature.
         ImmutablePair<byte[], BigInteger> closingHashPair =meshManager.getTransactionManager()
-                .calculateNewClosingHashFromSender(BigInteger.ZERO,sourceId.getRawUuid());
+                .calculateNewClosingHashFromSender(BigInteger.ZERO,sourceId.getRawMeshId());
         meshManager.getTransactionManager().removeMostRecentBillFromSender(sourceId);
-        meshManager.getTransactionManager().putNewClosingHashFromSender(sourceId.getRawUuid(),closingHashPair);
-        meshManager.getTransactionManager().putNewBalanceProofFromSender(sourceId.getRawUuid(),new ImmutablePair<>(zeroBalanceProofSignature,BigInteger.ZERO));
+        meshManager.getTransactionManager().putNewClosingHashFromSender(sourceId.getRawMeshId(),closingHashPair);
+        meshManager.getTransactionManager().putNewBalanceProofFromSender(sourceId.getRawMeshId(),new ImmutablePair<>(zeroBalanceProofSignature,BigInteger.ZERO));
         inChannel.setSignaturePair(closingHashPair);
 
         System.out.println("In-Channel Opened: " + sourceId + "-->" + ownMeshId);
@@ -585,7 +585,7 @@ public final class TransactionsManager {
         System.out.println("Response sent.");
     }
 
-    private void processCloseClientToSuperpeerReq(MeshID sourceId, JSONObject jsonObject){
+    private void processCloseClientToSuperpeerReq(MeshId sourceId, JSONObject jsonObject){
         System.out.println("Close client to superpeer request is received from " + sourceId);
 
         Object signedCloseClientToSuperTransaction = jsonObject.get("closeClientToSuperSig");
@@ -682,7 +682,7 @@ public final class TransactionsManager {
         System.out.println("Response sent.");
     }
 
-    private void processCloseSuperpeerToClientReq(MeshID sourceId, JSONObject jsonObject){
+    private void processCloseSuperpeerToClientReq(MeshId sourceId, JSONObject jsonObject){
         System.out.println("Close superpeer to client request is received from " + sourceId);
 
         Object signedCloseSuperToClientTransaction = jsonObject.get("closeSuperToClientSig");
@@ -785,7 +785,7 @@ public final class TransactionsManager {
      * @param receiverID The receiver address.
      * @return The Payment channel if exists in the Ether network, otherwise returns null.
      */
-    private EtherUtility.PaymentChannel getChannelFromEtherNetwork(MeshID senderID, MeshID receiverID) {
+    private EtherUtility.PaymentChannel getChannelFromEtherNetwork(MeshId senderID, MeshId receiverID) {
 
         EtherUtility.PaymentChannel channel;
         try {
@@ -807,7 +807,7 @@ public final class TransactionsManager {
      * @param receiver The channel's receiver.
      * @return Returns PaymentChannel objects if succeeded, otherwise returns null.
      */
-    private EtherUtility.PaymentChannel openChannel(MeshID sender, MeshID receiver) {
+    private EtherUtility.PaymentChannel openChannel(MeshId sender, MeshId receiver) {
 
         String senderAddress = sender.toString();
         String recvAddress = receiver.toString();
@@ -896,7 +896,7 @@ public final class TransactionsManager {
     }
 
 
-    private EtherUtility.PaymentChannel openChannel(MeshID sender, MeshID receiver,
+    private EtherUtility.PaymentChannel openChannel(MeshId sender, MeshId receiver,
                                                     String signedApproveTrans, String signedOpenChannelTrans) {
 
         String senderAddress = sender.toString();
@@ -985,9 +985,9 @@ public final class TransactionsManager {
      */
     public void closeChannels(String remotePeerAddress) {
 
-        MeshID remotePeerMeshId;
+        MeshId remotePeerMeshId;
         try {
-            remotePeerMeshId = new MeshID(remotePeerAddress);
+            remotePeerMeshId = new MeshId(remotePeerAddress);
         }catch (RightMeshException e){
             if (Settings.DEBUG_INFO) {
                 System.out.println("Failed to parse MeshId from address: " + remotePeerAddress);
@@ -998,7 +998,7 @@ public final class TransactionsManager {
         //Check for In-Channel
         ImmutablePair<ImmutablePair<byte[], BigInteger>, ImmutablePair<byte[], BigInteger>> bill = null;
         try {
-            bill = meshManager.getTransactionManager().getMostRecentBillFromSender(remotePeerMeshId.getRawUuid());
+            bill = meshManager.getTransactionManager().getMostRecentBillFromSender(remotePeerMeshId.getRawMeshId());
         } catch (RightMeshException e){
             if (Settings.DEBUG_INFO) {
                 System.out.println("Failed to get the most recent bill from sender, RightMeshException: "
@@ -1026,7 +1026,7 @@ public final class TransactionsManager {
                 }
 
                 closingSig = meshManager.getTransactionManager()
-                        .calculateNewClosingHashFromSender(balanceProofSig.right, remotePeerMeshId.getRawUuid());
+                        .calculateNewClosingHashFromSender(balanceProofSig.right, remotePeerMeshId.getRawMeshId());
             }
 
             //Double check the balance, should be ok now
@@ -1048,7 +1048,7 @@ public final class TransactionsManager {
         //Check for Out-Channel
         bill = null;
         try {
-            bill = meshManager.getTransactionManager().getMostRecentBillToReceiver(remotePeerMeshId.getRawUuid());
+            bill = meshManager.getTransactionManager().getMostRecentBillToReceiver(remotePeerMeshId.getRawMeshId());
         } catch (RightMeshException e){
             if (Settings.DEBUG_INFO) {
                 System.out.println("Failed to get the most recent bill to receiver, RightMeshException: "
@@ -1077,7 +1077,7 @@ public final class TransactionsManager {
                 }
 
                 balanceProofSig = meshManager.getTransactionManager()
-                        .calculateNewBalanceProofToReceiver(closingSig.right, remotePeerMeshId.getRawUuid());
+                        .calculateNewBalanceProofToReceiver(closingSig.right, remotePeerMeshId.getRawMeshId());
             }
 
             //Double check the balance, should be ok now
@@ -1101,13 +1101,13 @@ public final class TransactionsManager {
         boolean hasInChannel=false;
         boolean hasOutChannel=false;
         try {
-            meshManager.getTransactionManager().getMostRecentBillToReceiver(remotePeerMeshId.getRawUuid());
+            meshManager.getTransactionManager().getMostRecentBillToReceiver(remotePeerMeshId.getRawMeshId());
             hasOutChannel=true;
         } catch (RightMeshException e){
             //do nothing
         }
         try {
-            meshManager.getTransactionManager().getMostRecentBillFromSender(remotePeerMeshId.getRawUuid());
+            meshManager.getTransactionManager().getMostRecentBillFromSender(remotePeerMeshId.getRawMeshId());
             hasInChannel=true;
         } catch (RightMeshException e){
             //do nothing
@@ -1158,7 +1158,7 @@ public final class TransactionsManager {
      * @param destination The Peers address.
      * @param transaction The transaction.
      */
-    private void sendTransaction(MeshID destination, byte[] transaction) {
+    private void sendTransaction(MeshId destination, byte[] transaction) {
         meshManager.sendDataReliable(destination, MeshUtility.TRANSACTION_PORT, transaction);
     }
 }

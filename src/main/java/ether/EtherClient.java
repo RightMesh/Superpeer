@@ -1,7 +1,8 @@
 package ether;
 
-import io.left.rightmesh.id.MeshID;
+import io.left.rightmesh.id.MeshId;
 import io.left.rightmesh.util.EtherUtility;
+import io.left.rightmesh.util.MeshUtility;
 import org.apache.commons.codec.binary.Hex;
 import org.ethereum.core.CallTransaction;
 import org.ethereum.core.Transaction;
@@ -488,7 +489,7 @@ public final class EtherClient {
     /**
      * Closes a payment channel by receiver.
      *
-     * @param sigMeshId         The Receiver's MeshID.
+     * @param sigMeshId         The Receiver's MeshId.
      * @param senderAddress     The Sender's Ether address.
      * @param balance           The balance of the receiver.
      * @param balanceSig        The balance signature, signed by the sender.
@@ -496,7 +497,7 @@ public final class EtherClient {
      * @param httpAgent         The http agent to send the request to the Ether node.
      * @return                  True on success, otherwise returns False.
      */
-    public static boolean cooperativeCloseReceiver(MeshID sigMeshId, String senderAddress, BigInteger balance,
+    public static boolean cooperativeCloseReceiver(MeshId sigMeshId, String senderAddress, BigInteger balance,
                                                    byte[] balanceSig, byte[] closingSig, Http httpAgent) {
 
         byte[] balance_Msg_Hash_Sig_r = Arrays.copyOfRange(balanceSig, 0, 32);
@@ -552,11 +553,11 @@ public final class EtherClient {
             return false;
         }
 
-        Transaction trans = new Transaction(EtherUtility.bigIntegerToBytes(recvNonce), // nonce
-                EtherUtility.bigIntegerToBytes(Settings.GAS_PRICE), // gas price
-                EtherUtility.bigIntegerToBytes(new BigInteger(estimateGasRes.substring(2), 16)), // gas limit
+        Transaction trans = new Transaction(MeshUtility.bigIntegerToBytes(recvNonce), // nonce
+                MeshUtility.bigIntegerToBytes(Settings.GAS_PRICE), // gas price
+                MeshUtility.bigIntegerToBytes(new BigInteger(estimateGasRes.substring(2), 16)), // gas limit
                 ByteUtil.hexStringToBytes(Settings.CHANNEL_CONTRACT_ADDRESS), // to id
-                EtherUtility.bigIntegerToBytes(new BigInteger("0", 10)), // value
+                MeshUtility.bigIntegerToBytes(new BigInteger("0", 10)), // value
                 funcBytes,
                 Settings.CHAIN_ID);// chainid
 
@@ -591,7 +592,7 @@ public final class EtherClient {
     /**
      * Closes a payment channel by receiver.
      *
-     * @param sigMeshId         The Receiver's MeshID.
+     * @param sigMeshId         The Receiver's MeshId.
      * @param recvAddress       The Receiver's Ether address.
      * @param balance           The balance of the receiver.
      * @param balanceSig        The balance signature, signed by the sender.
@@ -599,7 +600,7 @@ public final class EtherClient {
      * @param httpAgent         The http agent to send the request to the Ether node.
      * @return                  True on success, otherwise returns False.
      */
-    public static boolean cooperativeCloseSender(MeshID sigMeshId, String recvAddress, BigInteger balance,
+    public static boolean cooperativeCloseSender(MeshId sigMeshId, String recvAddress, BigInteger balance,
                                                  byte[] balanceSig, byte[] closingSig, Http httpAgent) {
 
         byte[] balance_Msg_Hash_Sig_r = Arrays.copyOfRange(balanceSig, 0, 32);
@@ -655,11 +656,11 @@ public final class EtherClient {
             return false;
         }
 
-        Transaction trans = new Transaction(EtherUtility.bigIntegerToBytes(senderNonce), // nonce
-                EtherUtility.bigIntegerToBytes(Settings.GAS_PRICE), // gas price
-                EtherUtility.bigIntegerToBytes(new BigInteger(estimateGasRes.substring(2), 16)), // gas limit
+        Transaction trans = new Transaction(MeshUtility.bigIntegerToBytes(senderNonce), // nonce
+                MeshUtility.bigIntegerToBytes(Settings.GAS_PRICE), // gas price
+                MeshUtility.bigIntegerToBytes(new BigInteger(estimateGasRes.substring(2), 16)), // gas limit
                 ByteUtil.hexStringToBytes(Settings.CHANNEL_CONTRACT_ADDRESS), // to id
-                EtherUtility.bigIntegerToBytes(new BigInteger("0", 10)), // value
+                MeshUtility.bigIntegerToBytes(new BigInteger("0", 10)), // value
                 funcBytes,
                 Settings.CHAIN_ID);// chainid
 
