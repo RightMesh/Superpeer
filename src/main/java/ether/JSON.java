@@ -87,19 +87,19 @@ public final class JSON {
 
         JSONObject spToClient = new JSONObject();
         spToClient.put("sender", superPeerToClientChannel.senderAddress);
-        spToClient.put("recv", superPeerToClientChannel.recvAddress);
+        spToClient.put("recv", superPeerToClientChannel.receiverAddress);
         spToClient.put("initDeposit", superPeerToClientChannel.initDeposit.toString());
         spToClient.put("openBlockNum", superPeerToClientChannel.openBlockNum.toString());
-        spToClient.put("recvBalance", superPeerToClientChannel.recvBalance.toString());
+        spToClient.put("recvBalance", superPeerToClientChannel.receiverBalance.toString());
         spToClient.put("lastRecvBalanceMsgSig", superPeerToClientChannel.lastRecvBalanceMsgSig);
 
         JSONObject clientToSp = new JSONObject();
         if (clientToSuperPeerChannel != null) {
             clientToSp.put("sender", clientToSuperPeerChannel.senderAddress);
-            clientToSp.put("recv", clientToSuperPeerChannel.recvAddress);
+            clientToSp.put("recv", clientToSuperPeerChannel.receiverAddress);
             clientToSp.put("initDeposit", clientToSuperPeerChannel.initDeposit.toString());
             clientToSp.put("openBlockNum", clientToSuperPeerChannel.openBlockNum.toString());
-            clientToSp.put("recvBalance", clientToSuperPeerChannel.recvBalance.toString());
+            clientToSp.put("recvBalance", clientToSuperPeerChannel.receiverBalance.toString());
             clientToSp.put("lastRecvBalanceMsgSig", clientToSuperPeerChannel.lastRecvBalanceMsgSig);
         }
 
@@ -130,11 +130,11 @@ public final class JSON {
 
         JSONObject clientToSp = new JSONObject();
         clientToSp.put("sender", clientToSuperPeerChannel.senderAddress);
-        clientToSp.put("recv", clientToSuperPeerChannel.recvAddress);
+        clientToSp.put("recv", clientToSuperPeerChannel.receiverAddress);
         clientToSp.put("initDeposit", clientToSuperPeerChannel.initDeposit.toString());
         clientToSp.put("openBlockNum", clientToSuperPeerChannel.openBlockNum.toString());
-        clientToSp.put("recvBalance", clientToSuperPeerChannel.recvBalance.toString());
-        clientToSp.put("lastRecvBalanceMsgSig", clientToSuperPeerChannel.lastRecvBalanceMsgSig);
+        clientToSp.put("recvBalance", clientToSuperPeerChannel.receiverBalance.toString());
+        clientToSp.put("lastreceiverBalanceMsgSig", clientToSuperPeerChannel.lastRecvBalanceMsgSig);
 
         JSONObject response = new JSONObject();
         response.put("method", EtherUtility.RES_OPEN_CLIENT_TO_SUPER_PEER);
