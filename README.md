@@ -12,11 +12,17 @@ If run without arguments Superpeer polls STDIN for input - typing `exit` will sh
 
 By default RightMesh devices with internet connections will connect to a Superpeer operated by RightMesh at `research.rightmesh.io`. In the future the goal is to have a network of Superpeers, with Superpeers implemented and operated by both RightMesh and community members.
 
-If you would like to have devices use your Superpeer instance for testing, you can hard-code its address into a RightMesh application to make it use your instance instead of the production network. You can do this by passing the address as a parameter to a special MeshManager constructor that is available in the developer version of the library. Note that this will never be an option in production - all RightMesh applications will use the same network, so that the owner of the device can specify their preferences for where/when/how to connect to Superpeers.
+If you would like to have devices use your Superpeer instance for testing, you can hard-code its address into a RightMesh application to make it use your instance instead of the mainnet. You can do this by passing the address as a parameter to a special MeshManager constructor that is available in the developer version of the library. Note that this will never be an option on the mainnet - all RightMesh applications will use the same network, so that the owner of the device can specify their preferences for where/when/how to connect to Superpeers.
 
 If you would like to send data to a Java application that makes use of RightMesh in a production application, you will need to find out its MeshID and send data to it through the RightMesh library.
 
 ## Running the Superpeer as a Service
+
+This was all tested with the following:
+* Ubuntu 16.04.4 LTS
+* Java 8
+* Parity 1.8.6
+* RightMesh library 0.7.0
 
 This repo contains everything needed to set up a Superpeer as a service on Ubuntu. These steps will help you get started:
 
