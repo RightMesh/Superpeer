@@ -38,7 +38,7 @@ buildscript {
         mavenCentral()
         jcenter()
         maven {
-            url "http://research.rightmesh.io/artifactory/libs-local"
+            url "https://research.rightmesh.io/artifactory/libs-local"
             credentials {
                 username artifactory_app_username
                 password artifactory_app_password
@@ -67,7 +67,7 @@ repositories {
     }
     jcenter()
     maven {
-        url "http://research.rightmesh.io/artifactory/libs-local"
+        url "https://research.rightmesh.io/artifactory/libs-local"
         credentials {
             username artifactory_app_username
             password artifactory_app_password
@@ -79,7 +79,7 @@ dependencies {
     // This dependency is found on compile classpath of this component and consumers.
     implementation group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.3.4'
     implementation 'com.google.guava:guava:23.0'
-    implementation ('io.left.rightmesh:rightmesh-java-library:0.5.0')
+    implementation ('io.left.rightmesh:rightmesh-java-library:0.7.0')
     // Use JUnit test framework
     testCompile 'junit:junit:4.12'
 
