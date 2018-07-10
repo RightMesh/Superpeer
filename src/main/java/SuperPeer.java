@@ -6,6 +6,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+import io.github.cdimascio.dotenv.Dotenv;
+
 public class SuperPeer {
     public static final String TAG = SuperPeer.class.getCanonicalName();
 
@@ -30,7 +32,11 @@ public class SuperPeer {
 
     public SuperPeer(boolean interactive)
     {
-        boolean hasVisualization = true;
+        Dotenv dotenv = Dotenv.configure()
+                .directory("src/.env")
+                .ignoreIfMalformed()
+                .ignoreIfMissing()
+                .load();
         mm = new JavaMeshManager(true);
 
         MeshUtility.Log(TAG, "Superpeer MeshID: " + mm.getUuid());
@@ -51,7 +57,7 @@ public class SuperPeer {
         MeshUtility.Log(TAG, "Superpeer is ready!");
 
         // Start visualization
-        if (hasVisualization) {
+        if (dotenv.get("VISUALIZATION").equals("1")) {
             Visualization vis = new Visualization();
         }
 

@@ -1,8 +1,3 @@
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -14,7 +9,6 @@ import io.left.rightmesh.mesh.JavaMeshManager;
 import io.left.rightmesh.proto.MeshDnsProtos;
 import io.left.rightmesh.routing.Route;
 import io.left.rightmesh.routing.RoutingTable;
-import io.left.rightmesh.util.MeshUtility;
 
 import static io.left.rightmesh.proto.MeshDnsProtos.MeshRequest.Role.MASTER;
 import static io.left.rightmesh.proto.MeshDnsProtos.MeshRequest.Role.SUPERPEER;
