@@ -1,12 +1,12 @@
 import ether.TransactionsManager;
 
 import io.left.rightmesh.mesh.JavaMeshManager;
+import io.left.rightmesh.util.MeshUtility;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
 public class SuperPeer {
-    //TODO: Add logger instead of system.out
     public static final String TAG = SuperPeer.class.getCanonicalName();
 
     private static final String EXIT_CMD = "exit";
@@ -16,7 +16,8 @@ public class SuperPeer {
     private boolean isRunning = true;
     private TransactionsManager tm;
 
-    public static void main(String[] args) {
+    public static void main(String[] args)
+    {
         if (args.length > 0 && (args[0].equals("-h") || args[0].equals("--headless"))) {
             // Doesn't read from STDIN if run with `-h` or `--headless`.
             // Useful for backgrounding.
@@ -27,11 +28,13 @@ public class SuperPeer {
         }
     }
 
-    public SuperPeer(boolean interactive) {
+    public SuperPeer(boolean interactive)
+    {
+        boolean hasVisualization = true;
         mm = new JavaMeshManager(true);
 
-        System.out.println("Superpeer MeshID: " + mm.getUuid());
-        System.out.println("Superpeer is waiting for library ... ");
+        MeshUtility.Log(TAG, "Superpeer MeshID: " + mm.getUuid());
+        MeshUtility.Log(TAG, "Superpeer is waiting for library ... ");
         try {
             Thread.sleep(200);
 
@@ -40,12 +43,17 @@ public class SuperPeer {
 
         tm = TransactionsManager.getInstance(mm);
         if (tm == null){
-            System.out.println("Failed to get TransactionManager from library. Superpeer is shutting down ...");
+            MeshUtility.Log(TAG,"Failed to get TransactionManager from library. Superpeer is shutting down ...");
             mm.stop();
             System.exit(0);
         }
         tm.start();
-        System.out.println("Superpeer is ready!");
+        MeshUtility.Log(TAG, "Superpeer is ready!");
+
+        // Start visualization
+        if (hasVisualization) {
+            Visualization vis = new Visualization();
+        }
 
         // Stop everything when runtime is killed.
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -107,14 +115,14 @@ public class SuperPeer {
                 break;
 
             default:
-                System.out.println("Invalid command.");
+                MeshUtility.Log(TAG, "Invalid command.");
                 break;
         }
     }
 
     private void processCloseCmd(String[] args) {
         if(args.length != 2) {
-            System.out.println("Invalid args.");
+            MeshUtility.Log(TAG, "Invalid args.");
             return;
         }
 
