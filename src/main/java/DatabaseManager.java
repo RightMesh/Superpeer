@@ -422,7 +422,7 @@ public class DatabaseManager {
      *
      * @param id
      */
-    public static void addMasterAndCleanup(String id)
+    public static void addSuperpeerAndCleanup(String id)
     {
         Connection conn = getConnection();
         if (conn != null) {

@@ -124,6 +124,6 @@ public class Visualization implements PeerListener {
 	private void updateMaster()
 	{
 		String id = jmm.getUuid().toString().substring(2);
-		DatabaseManager.addMasterAndCleanup(id);
+		DatabaseManager.addSuperpeerAndCleanup(id);
 	}
 }
