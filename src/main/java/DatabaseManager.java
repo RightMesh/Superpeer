@@ -159,22 +159,19 @@ public class DatabaseManager {
     {
         Connection conn = getConnection();
         if (conn != null) {
+            if (!deviceExists(conn, id)) {
+                //new node
+                addDevice(conn, id, role, connected);
+            } else {
+                //update node
+                updateDevice(conn, id, role, connected);
+            }
             try {
-                if (!deviceExists(conn, id)) {
-                    //new node
-                    addDevice(conn, id, role, connected);
-                } else {
-                    //update node
-                    updateDevice(conn, id, role, connected);
+                if (conn != null) {
+                    conn.close();
                 }
-            } finally {
-                try {
-                    if (conn != null) {
-                        conn.close();
-                    }
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
             }
         }
     }
@@ -287,20 +284,17 @@ public class DatabaseManager {
     {
         Connection conn = getConnection();
         if (conn != null) {
+            if (!linkExists(conn, targetId, nextHopId)) {
+                insertLink(conn, targetId, nextHopId);
+            } else {
+                updateLink(conn, targetId, nextHopId);
+            }
             try {
-                if (!linkExists(conn, targetId, nextHopId)) {
-                    insertLink(conn, targetId, nextHopId);
-                } else {
-                    updateLink(conn, targetId, nextHopId);
+                if (conn != null) {
+                    conn.close();
                 }
-            } finally {
-                try {
-                    if (conn != null) {
-                        conn.close();
-                    }
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
             }
         }
     }
@@ -436,26 +430,23 @@ public class DatabaseManager {
     {
         Connection conn = getConnection();
         if (conn != null) {
+            if (deviceExists(conn, id)) {
+                updateDevice(conn, id, SUPERPEER.getNumber(), true);
+
+                //clean up unheard from devices
+                cleanupStaleDevices(conn);
+
+                //cleanup unheard from links
+                cleanupStaleLinks(conn);
+            } else {
+                addDevice(conn, id, SUPERPEER.getNumber(), true);
+            }
             try {
-                if (deviceExists(conn, id)) {
-                    updateDevice(conn, id, SUPERPEER.getNumber(), true);
-
-                    //clean up unheard from devices
-                    cleanupStaleDevices(conn);
-
-                    //cleanup unheard from links
-                    cleanupStaleLinks(conn);
-                } else {
-                    addDevice(conn, id, SUPERPEER.getNumber(), true);
+                if (conn != null) {
+                    conn.close();
                 }
-            } finally {
-                try {
-                    if (conn != null) {
-                        conn.close();
-                    }
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
             }
         }
     }
