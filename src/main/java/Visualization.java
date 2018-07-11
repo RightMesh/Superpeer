@@ -14,8 +14,13 @@ import static io.left.rightmesh.proto.MeshDnsProtos.MeshRequest.Role.MASTER;
 import static io.left.rightmesh.proto.MeshDnsProtos.MeshRequest.Role.SUPERPEER;
 import static io.left.rightmesh.proto.MeshDnsProtos.MeshRequest.Role.UNSET;
 
+/**
+ * This class writes to the database for any peer changed event and tracks
+ * the devices and links in the network that's connected to the Superpeer.
+ *
+ * Created by rachel on 2018-07-09.
+ */
 public class Visualization implements PeerListener {
-	public static final String TAG = Visualization.class.getCanonicalName();
 	private JavaMeshManager jmm;
 
 	public Visualization() {
@@ -38,6 +43,11 @@ public class Visualization implements PeerListener {
 		new Thread(visualizationTask).start();
 	}
 
+	/**
+	 * Get role from peer
+	 * @param peerMeshId
+	 * @return Role
+	 */
 	private MeshDnsProtos.MeshRequest.Role getRoleFromPeer(MeshId peerMeshId)
 	{
 		MeshDnsProtos.MeshRequest.Role role = UNSET;
@@ -108,6 +118,9 @@ public class Visualization implements PeerListener {
 		}
 	}
 
+	/**
+	 * Update database with superpeer information
+	 */
 	private void updateMaster()
 	{
 		String id = jmm.getUuid().toString().substring(2);
