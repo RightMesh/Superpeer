@@ -331,14 +331,6 @@ public class DatabaseManager {
             MeshUtility.Log(TAG, "SQLState: " + ex.getSQLState());
             MeshUtility.Log(TAG, "VendorError: " + ex.getErrorCode());
             MeshUtility.Log(TAG, "SQL: " + statement.toString());
-        } finally {
-            try {
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
         }
     }
 
