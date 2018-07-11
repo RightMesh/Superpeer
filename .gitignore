@@ -3,6 +3,8 @@
 .parity
 .parity-pass
 parity.log
+src/.env
+local.properties
 
 #license
 src/main/assets/

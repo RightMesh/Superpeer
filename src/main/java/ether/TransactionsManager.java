@@ -987,7 +987,7 @@ public final class TransactionsManager {
 
         MeshId remotePeerMeshId;
         try {
-            remotePeerMeshId = new MeshId(remotePeerAddress);
+            remotePeerMeshId = MeshId.fromString(remotePeerAddress);
         }catch (RightMeshException e){
             if (Settings.DEBUG_INFO) {
                 System.out.println("Failed to parse MeshId from address: " + remotePeerAddress);
