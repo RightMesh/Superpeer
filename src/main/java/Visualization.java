@@ -82,10 +82,6 @@ public class Visualization implements PeerListener {
 	 */
 	public void peerChanged(MeshId peerMeshId, int state)
 	{
-		if (state == REMOVED) {
-			return;
-		}
-
 		String id = peerMeshId.toString().substring(2);
 
 		//determine the role of the peer we just found

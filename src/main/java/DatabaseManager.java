@@ -60,6 +60,8 @@ public class DatabaseManager {
      */
     private static boolean deviceExists(Connection conn, String meshId)
     {
+        assert conn != null;
+
         PreparedStatement statement = null;
         ResultSet rs = null;
         try {
@@ -93,6 +95,8 @@ public class DatabaseManager {
                                   Integer role,
                                   boolean connected)
     {
+        assert conn != null;
+
         PreparedStatement statement = null;
         try {
             statement = conn.prepareStatement("INSERT INTO devices(uuid, role, connected) " +
@@ -123,6 +127,8 @@ public class DatabaseManager {
                                      Integer role,
                                      boolean connected)
     {
+        assert conn != null;
+
         PreparedStatement statement = null;
         try {
             statement = conn.prepareStatement("UPDATE devices "+
@@ -184,6 +190,8 @@ public class DatabaseManager {
                                       String sourceMeshId,
                                       String targetMeshId)
     {
+        assert conn != null;
+
         PreparedStatement statement = null;
         ResultSet rs = null;
 
@@ -218,6 +226,8 @@ public class DatabaseManager {
                                    String sourceMeshId,
                                    String targetMeshId)
     {
+        assert conn != null;
+
         PreparedStatement statement = null;
 
         try {
@@ -246,6 +256,8 @@ public class DatabaseManager {
                                    String sourceMeshId,
                                    String targetMeshId)
     {
+        assert conn != null;
+
         PreparedStatement statement = null;
 
         try {
@@ -303,6 +315,8 @@ public class DatabaseManager {
                                    String sourceMeshId,
                                    String targetMeshId)
     {
+        assert conn != null;
+
         PreparedStatement statement = null;
         try {
             statement = conn.prepareStatement("DELETE FROM links "+
@@ -335,6 +349,8 @@ public class DatabaseManager {
      */
     private static void cleanupStaleLinks(Connection conn)
     {
+        assert conn != null;
+
         PreparedStatement statement = null;
         ResultSet rs = null;
 
@@ -375,6 +391,8 @@ public class DatabaseManager {
      */
     private static void cleanupStaleDevices(Connection conn)
     {
+        assert conn != null;
+
         PreparedStatement statement = null;
         ResultSet rs = null;
 
