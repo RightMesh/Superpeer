@@ -18,6 +18,8 @@ public class SuperPeer {
     private boolean isRunning = true;
     private TransactionsManager tm;
 
+    private Dotenv dotenv = null;
+
     public static void main(String[] args)
     {
         if (args.length > 0 && (args[0].equals("-h") || args[0].equals("--headless"))) {
@@ -32,8 +34,8 @@ public class SuperPeer {
 
     public SuperPeer(boolean interactive)
     {
-        Dotenv dotenv = Dotenv.configure()
-                .directory("src/.env")
+        dotenv = Dotenv.configure()
+                .directory("/Users/rachel/Sites/SuperpeerVis/src/.env")
                 .ignoreIfMalformed()
                 .ignoreIfMissing()
                 .load();
@@ -58,7 +60,7 @@ public class SuperPeer {
 
         // Start visualization
         if (dotenv.get("VISUALIZATION").equals("1")) {
-            Visualization vis = new Visualization();
+            Visualization vis = new Visualization(dotenv);
         }
 
         // Stop everything when runtime is killed.

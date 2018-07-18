@@ -1,6 +1,8 @@
+import java.sql.Connection;
 import java.util.Iterator;
 import java.util.Map;
 
+import io.github.cdimascio.dotenv.Dotenv;
 import io.left.rightmesh.id.MeshLink;
 import io.left.rightmesh.id.MeshPeer;
 import io.left.rightmesh.mesh.PeerListener;
@@ -22,10 +24,16 @@ import static io.left.rightmesh.proto.MeshDnsProtos.MeshRequest.Role.UNSET;
  */
 public class Visualization implements PeerListener {
 	private JavaMeshManager jmm;
+	private String DB_URL;
+	private String USER;
+	private String PASS;
 
-	public Visualization() {
+	public Visualization(Dotenv dotenv) {
 		jmm = new JavaMeshManager(true);
 		jmm.registerAllPeerListener(this);
+		DB_URL = dotenv.get("DB_URL");
+		USER = dotenv.get("DB_USER");
+		PASS = dotenv.get("DB_PASSWORD");
 
 		Runnable visualizationTask = () -> {
 			while(true)
@@ -91,7 +99,8 @@ public class Visualization implements PeerListener {
 		if (state == REMOVED)
 			connected = false;
 
-		DatabaseManager.addPeer(id, role.getNumber(), connected);
+		Connection conn = DatabaseManager.getConnection(DB_URL, USER, PASS);
+		DatabaseManager.addPeer(conn, id, role.getNumber(), connected);
 
 		RoutingTable table = jmm.getTable();
 		if (table != null) {
@@ -109,7 +118,7 @@ public class Visualization implements PeerListener {
 
 				String targetId = target.toString().substring(2);
 				String nextHopId = nextHop.toString().substring(2);
-				DatabaseManager.addLink(targetId, nextHopId);
+				DatabaseManager.addLink(conn, targetId, nextHopId);
 			}
 		}
 	}
@@ -119,7 +128,8 @@ public class Visualization implements PeerListener {
 	 */
 	private void updateMaster()
 	{
+		Connection conn = DatabaseManager.getConnection(DB_URL, USER, PASS);
 		String id = jmm.getUuid().toString().substring(2);
-		DatabaseManager.addSuperpeerAndCleanup(id);
+		DatabaseManager.addSuperpeerAndCleanup(conn, id);
 	}
 }

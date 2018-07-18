@@ -27,20 +27,12 @@ public class DatabaseManager {
     /**
      * Instantiates the database connection
      */
-    private static Connection getConnection()
+    public static Connection getConnection(String dbUrl, String username, String password)
     {
-        Dotenv dotenv = Dotenv.configure()
-                .directory("src/.env")
-                .ignoreIfMalformed()
-                .ignoreIfMissing()
-                .load();
-        String DB_URL = dotenv.get("DB_URL");
-        String USER = dotenv.get("DB_USER");
-        String PASS = dotenv.get("DB_PASSWORD");
         Connection conn = null;
         try {
             Class.forName("com.mysql.jdbc.Driver");
-            conn = DriverManager.getConnection(DB_URL, USER, PASS);
+            conn = DriverManager.getConnection(dbUrl, username, password);
         } catch (SQLException ex) {
             MeshUtility.Log(TAG, "SQLException: " + ex.getMessage());
             MeshUtility.Log(TAG, "SQLState: " + ex.getSQLState());
@@ -155,9 +147,8 @@ public class DatabaseManager {
      * @param role
      * @param connected
      */
-    public static void addPeer(String id, int role, boolean connected)
+    public static void addPeer(Connection conn, String id, int role, boolean connected)
     {
-        Connection conn = getConnection();
         if (conn != null) {
             if (!deviceExists(conn, id)) {
                 //new node
@@ -280,9 +271,8 @@ public class DatabaseManager {
      * @param targetId
      * @param nextHopId
      */
-    public static void addLink(String targetId, String nextHopId)
+    public static void addLink(Connection conn, String targetId, String nextHopId)
     {
-        Connection conn = getConnection();
         if (conn != null) {
             if (!linkExists(conn, targetId, nextHopId)) {
                 insertLink(conn, targetId, nextHopId);
@@ -426,9 +416,8 @@ public class DatabaseManager {
      *
      * @param id
      */
-    public static void addSuperpeerAndCleanup(String id)
+    public static void addSuperpeerAndCleanup(Connection conn, String id)
     {
-        Connection conn = getConnection();
         if (conn != null) {
             if (deviceExists(conn, id)) {
                 updateDevice(conn, id, SUPERPEER.getNumber(), true);

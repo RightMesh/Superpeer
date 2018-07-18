@@ -30,9 +30,9 @@ applicationDefaultJvmArgs = ["-noverify"]
 buildscript {
     ext {
         //virtualBoxDir = file('build/parity')
-        artifactory_app_username = "username"
-        artifactory_app_password = "password"
-        artifactory_app_key = "app_key"
+        artifactory_app_username = "portaladmin"
+        artifactory_app_password = "790eefbacd7ab416753de296548aaf3c"
+        artifactory_app_key = "0xe6e914d16575d2543e21795dc3d67e7dcb52e3f6"
     }
     repositories {
         mavenCentral()
