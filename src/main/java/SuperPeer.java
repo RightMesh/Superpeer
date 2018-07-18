@@ -35,7 +35,7 @@ public class SuperPeer {
     public SuperPeer(boolean interactive)
     {
         dotenv = Dotenv.configure()
-                .directory("/Users/rachel/Sites/SuperpeerVis/src/.env")
+                .directory("src/.env")
                 .ignoreIfMalformed()
                 .ignoreIfMissing()
                 .load();
