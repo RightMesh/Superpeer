@@ -39,29 +39,22 @@ installMac() {
 }
 
 
+# OS check and run correct installation
 if ! type parity > /dev/null;
 then
-
-    platform='unknown'
     unamestr=`uname`
-    if [[ "$unamestr" == 'Linux' ]]; then
-
-       installLinux;
-    elif [[ "$unamestr" == 'Darwin' ]]; then
+    if [[ "$unamestr" == 'Darwin' ]]; then
        installMac;
     else
-        echo "Platform: $unamestr unknown";
-        exit -1;
+        installLinux
     fi
-
 
 else
     echo "Parity is already installed."
 fi
 
 
-
-
+# Launch parity if it is not running already
 if ! ps ax | grep parity | grep -v grep > /dev/null;
 then
     echo "Launching parity ..."
@@ -69,7 +62,3 @@ then
 fi
 PID=`ps -ef | grep parity | grep -v grep | awk '{print $2}'`
 echo "Parity is running with PID $PID"
-
-
-
-

@@ -1,10 +1,10 @@
 /*
  * Gradle build file for the RM Superpeer. Generated initially with
  * gradle 4.1 and the init command.
- * 
+ *
  * Uses a git plugin to checkout the Ethereum Parity Client vagrant
  * setup. Uses a plugin to execute the ethereum parity vagrant using
- * vagrant up. Parity client will be setup to listen on 
+ * vagrant up. Parity client will be setup to listen on
  * http://localhost:8545 so that the Superpeer can relay ethereum
  * remote signed transaction into it to be executed on the ethereum
  * blockchain. Should be configured to use either the Kovan testnet
@@ -30,9 +30,9 @@ applicationDefaultJvmArgs = ["-noverify"]
 buildscript {
     ext {
         //virtualBoxDir = file('build/parity')
-        artifactory_app_username = "username"
-        artifactory_app_password = "password"
-        artifactory_app_key = "app_key"
+        artifactory_app_username = "marshallasch"
+        artifactory_app_password = "04a972ab0170538841a501bb36a64586"
+        artifactory_app_key = "0xa67d48cef4faaba71ce55435e389f5fdf4bb6419"
     }
     repositories {
         mavenCentral()
@@ -79,7 +79,7 @@ dependencies {
     // This dependency is found on compile classpath of this component and consumers.
     implementation group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.3.4'
     implementation 'com.google.guava:guava:23.0'
-    implementation ('io.left.rightmesh:rightmesh-java-library:0.7.0')
+    implementation ('io.left.rightmesh:rightmesh-java-library:0.8.0')
     // Use JUnit test framework
     testCompile 'junit:junit:4.12'
 

@@ -29,8 +29,9 @@ file.
 
 # Setting up
 If you want to run the parity client directly, run the `configure.sh`
-script. This will install parity from .deb (on Linux) or homebrew on MacOS
-and start it up.
+script. This will install parity from .deb (on Linux) or Homebrew on MacOS
+and start it up. If it is running on mac and Homebrew is not installed then it
+will be installed.
 
 Otherwise you can uncomment the last few lines in the
 build.gradle script to run parity in vagrant. If you wish to run it
