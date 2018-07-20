@@ -116,6 +116,49 @@ public class DatabaseManager {
     }
 
     /**
+     * Checks/Updates the highest number of nodes that have connected at one time
+     *
+     */
+    private static void checkMaxNodes(Connection conn)
+    {
+        assert conn != null;
+
+        PreparedStatement statement = null;
+        ResultSet rs = null;
+        
+        try {
+            statement = conn.prepareStatement("SELECT COUNT(*) " +
+                    "FROM devices " +
+                    "WHERE connected = ?");
+            statement.setInt(1, 1);
+            rs = statement.executeQuery();
+            rs.next();
+            int deviceCount = rs.getInt(1);
+
+            statement = conn.prepareStatement("SELECT max_device_count " +
+                    "FROM max_devices");
+            rs = statement.executeQuery();
+            rs.next();
+            int maxCount = rs.getInt(1);
+
+            if (deviceCount > maxCount) {
+                statement = conn.prepareStatement("UPDATE max_devices " +
+                        "SET max_device_count = ?, happened_on = CURRENT_TIMESTAMP");
+                statement.setInt(1, deviceCount);
+                statement.executeUpdate();
+                MeshUtility.Log(TAG, "Updating Max Devices From " + maxCount + " to " + deviceCount);
+            }
+            
+        } catch (SQLException ex) {
+            MeshUtility.Log(TAG, "Error adding device");
+            MeshUtility.Log(TAG, "SQLException: " + ex.getMessage());
+            MeshUtility.Log(TAG, "SQLState: " + ex.getSQLState());
+            MeshUtility.Log(TAG, "VendorError: " + ex.getErrorCode());
+            MeshUtility.Log(TAG, "SQL: " + statement.toString());
+        }
+    }
+
+    /**
      * Update the record of the device
      *
      * @param meshId
@@ -166,6 +209,7 @@ public class DatabaseManager {
                 //update node
                 updateDevice(conn, id, role, connected);
             }
+            checkMaxNodes(conn);
             try {
                 if (conn != null) {
                     conn.close();
