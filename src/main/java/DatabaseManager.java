@@ -125,12 +125,11 @@ public class DatabaseManager {
 
         PreparedStatement statement = null;
         ResultSet rs = null;
-        
+
         try {
             statement = conn.prepareStatement("SELECT COUNT(*) " +
                     "FROM devices " +
-                    "WHERE connected = ?");
-            statement.setInt(1, 1);
+                    "WHERE connected = 1");
             rs = statement.executeQuery();
             rs.next();
             int deviceCount = rs.getInt(1);
@@ -148,6 +147,12 @@ public class DatabaseManager {
                 statement.executeUpdate();
                 MeshUtility.Log(TAG, "Updating Max Devices From " + maxCount + " to " + deviceCount);
             }
+            if (deviceCount == maxCount) {
+                statement = conn.prepareStatement("UPDATE max_devices " +
+                        "SET happened_on = CURRENT_TIMESTAMP");
+                statement.executeUpdate();
+                MeshUtility.Log(TAG, "New timestamp for Max Devices");
+            } 
             
         } catch (SQLException ex) {
             MeshUtility.Log(TAG, "Error adding device");
