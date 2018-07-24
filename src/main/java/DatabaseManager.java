@@ -141,20 +141,13 @@ public class DatabaseManager {
             int maxCount = rs.getInt(1);
 
             // if there's a new highest network count, update the entry with the new count and when it happened
-            if (deviceCount > maxCount) {
+            if (deviceCount >= maxCount) {
                 statement = conn.prepareStatement("UPDATE max_devices " +
                         "SET max_device_count = ?, happened_on = CURRENT_TIMESTAMP");
                 statement.setInt(1, deviceCount);
                 statement.executeUpdate();
                 MeshUtility.Log(TAG, "Updating Max Devices From " + maxCount + " to " + deviceCount);
             }
-            // if the count's the same as the current count, update the new time it happened
-            if (deviceCount == maxCount) {
-                statement = conn.prepareStatement("UPDATE max_devices " +
-                        "SET happened_on = CURRENT_TIMESTAMP");
-                statement.executeUpdate();
-                MeshUtility.Log(TAG, "New timestamp for Max Devices");
-            } 
             
         } catch (SQLException ex) {
             MeshUtility.Log(TAG, "Error adding device");
