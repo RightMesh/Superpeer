@@ -59,7 +59,8 @@ public class SuperPeer {
         MeshUtility.Log(TAG, "Superpeer is ready!");
 
         // Start visualization
-        if (dotenv.get("VISUALIZATION").equals("1")) {
+        String visualization = dotenv.get("VISUALIZATION");
+        if (visualization != null && visualization.equals("1")) {
             Visualization vis = new Visualization(dotenv);
         }
 
