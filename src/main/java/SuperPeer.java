@@ -18,10 +18,9 @@ public class SuperPeer {
     private boolean isRunning = true;
     private TransactionsManager tm;
 
-    private Dotenv dotenv = null;
+    private Dotenv dotenv;
 
-    public static void main(String[] args)
-    {
+    public static void main(String[] args) {
         if (args.length > 0 && (args[0].equals("-h") || args[0].equals("--headless"))) {
             // Doesn't read from STDIN if run with `-h` or `--headless`.
             // Useful for backgrounding.
@@ -32,8 +31,7 @@ public class SuperPeer {
         }
     }
 
-    public SuperPeer(boolean interactive)
-    {
+    public SuperPeer(boolean interactive) {
         dotenv = Dotenv.configure()
                 .directory("src/.env")
                 .ignoreIfMalformed()
@@ -50,7 +48,7 @@ public class SuperPeer {
 
 
         tm = TransactionsManager.getInstance(mm);
-        if (tm == null){
+        if (tm == null) {
             MeshUtility.Log(TAG,"Failed to get TransactionManager from library. Superpeer is shutting down ...");
             mm.stop();
             System.exit(0);
@@ -65,9 +63,7 @@ public class SuperPeer {
         }
 
         // Stop everything when runtime is killed.
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            SuperPeer.this.finish();
-        }));
+        Runtime.getRuntime().addShutdownHook(new Thread(this::finish));
 
         if (interactive) {
             // Block for user input if running in interactive mode.
