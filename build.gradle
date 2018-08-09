@@ -29,10 +29,16 @@ apply plugin: 'application'
 applicationDefaultJvmArgs = ["-noverify"]
 buildscript {
     ext {
-        //virtualBoxDir = file('build/parity')
-        artifactory_app_username = "username"
-        artifactory_app_password = "password"
-        artifactory_app_key = "app_key"
+        // define these variables in your personal ~/.gradle/gradle.properties
+        // for example:
+        /*
+            rightmesh_artifactory_username=<username>
+            rightmesh_artifactory_password=<hash of your developer portal password>
+            rightmesh_superpeer_key=<some key that you have access to>
+        */
+        artifactory_app_username = "${rightmesh_artifactory_username}"
+        artifactory_app_password = "${rightmesh_artifactory_password}"
+        artifactory_app_key = "${rightmesh_superpeer_key}"
     }
     repositories {
         mavenCentral()
@@ -79,7 +85,7 @@ dependencies {
     // This dependency is found on compile classpath of this component and consumers.
     implementation group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.3.4'
     implementation 'com.google.guava:guava:23.0'
-    implementation ('io.left.rightmesh:rightmesh-java-library-dev:0.7.1-RACHEL-SNAPSHOT')
+    implementation ('io.left.rightmesh:rightmesh-java-library-dev:0.8.1-SACHIN-SNAPSHOT')
     // Use JUnit test framework
     testCompile 'junit:junit:4.12'
 

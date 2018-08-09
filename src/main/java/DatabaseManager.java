@@ -7,7 +7,7 @@ import java.sql.SQLException;
 import io.github.cdimascio.dotenv.Dotenv;
 
 import io.left.rightmesh.id.MeshId;
-import io.left.rightmesh.util.MeshUtility;
+import io.left.rightmesh.util.Logger;
 
 import static io.left.rightmesh.proto.MeshDnsProtos.MeshRequest.Role.SUPERPEER;
 
@@ -34,9 +34,9 @@ public class DatabaseManager {
             Class.forName("com.mysql.jdbc.Driver");
             conn = DriverManager.getConnection(dbUrl, username, password);
         } catch (SQLException ex) {
-            MeshUtility.Log(TAG, "SQLException: " + ex.getMessage());
-            MeshUtility.Log(TAG, "SQLState: " + ex.getSQLState());
-            MeshUtility.Log(TAG, "VendorError: " + ex.getErrorCode());
+            Logger.log(TAG, "SQLException: " + ex.getMessage());
+            Logger.log(TAG, "SQLState: " + ex.getSQLState());
+            Logger.log(TAG, "VendorError: " + ex.getErrorCode());
         } catch (ClassNotFoundException ex) {
             ex.printStackTrace();
         }
@@ -63,13 +63,13 @@ public class DatabaseManager {
             if (rs.isBeforeFirst()) {
                 return true;
             }
-            MeshUtility.Log(TAG, "Finding device: " + meshId);
+            Logger.log(TAG, "Finding device: " + meshId);
         } catch (SQLException ex) {
-            MeshUtility.Log(TAG, "Error finding device");
-            MeshUtility.Log(TAG, "SQLException: " + ex.getMessage());
-            MeshUtility.Log(TAG, "SQLState: " + ex.getSQLState());
-            MeshUtility.Log(TAG, "VendorError: " + ex.getErrorCode());
-            MeshUtility.Log(TAG, "SQL: " + statement.toString());
+            Logger.log(TAG, "Error finding device");
+            Logger.log(TAG, "SQLException: " + ex.getMessage());
+            Logger.log(TAG, "SQLState: " + ex.getSQLState());
+            Logger.log(TAG, "VendorError: " + ex.getErrorCode());
+            Logger.log(TAG, "SQL: " + statement.toString());
         }
 
         return false;
@@ -97,13 +97,13 @@ public class DatabaseManager {
             statement.setInt(2, role);
             statement.setBoolean(3, connected);
             statement.executeUpdate();
-            MeshUtility.Log(TAG, "Adding device: " + meshId);
+            Logger.log(TAG, "Adding device: " + meshId);
         } catch (SQLException ex) {
-            MeshUtility.Log(TAG, "Error adding device");
-            MeshUtility.Log(TAG, "SQLException: " + ex.getMessage());
-            MeshUtility.Log(TAG, "SQLState: " + ex.getSQLState());
-            MeshUtility.Log(TAG, "VendorError: " + ex.getErrorCode());
-            MeshUtility.Log(TAG, "SQL: " + statement.toString());
+            Logger.log(TAG, "Error adding device");
+            Logger.log(TAG, "SQLException: " + ex.getMessage());
+            Logger.log(TAG, "SQLState: " + ex.getSQLState());
+            Logger.log(TAG, "VendorError: " + ex.getErrorCode());
+            Logger.log(TAG, "SQL: " + statement.toString());
         }
     }
 
@@ -138,15 +138,15 @@ public class DatabaseManager {
                         "SET max_device_count = ?, happened_on = CURRENT_TIMESTAMP");
                 statement.setInt(1, deviceCount);
                 statement.executeUpdate();
-                MeshUtility.Log(TAG, "Updating Max Devices From " + maxCount + " to " + deviceCount);
+                Logger.log(TAG, "Updating Max Devices From " + maxCount + " to " + deviceCount);
             }
-            
+
         } catch (SQLException ex) {
-            MeshUtility.Log(TAG, "Error adding device");
-            MeshUtility.Log(TAG, "SQLException: " + ex.getMessage());
-            MeshUtility.Log(TAG, "SQLState: " + ex.getSQLState());
-            MeshUtility.Log(TAG, "VendorError: " + ex.getErrorCode());
-            MeshUtility.Log(TAG, "SQL: " + statement.toString());
+            Logger.log(TAG, "Error adding device");
+            Logger.log(TAG, "SQLException: " + ex.getMessage());
+            Logger.log(TAG, "SQLState: " + ex.getSQLState());
+            Logger.log(TAG, "VendorError: " + ex.getErrorCode());
+            Logger.log(TAG, "SQL: " + statement.toString());
         }
     }
 
@@ -173,13 +173,13 @@ public class DatabaseManager {
             statement.setInt(2, role);
             statement.setString(3, meshId);
             statement.executeUpdate();
-            MeshUtility.Log(TAG, "Updating device: " + meshId);
+            Logger.log(TAG, "Updating device: " + meshId);
         } catch (SQLException ex) {
-            MeshUtility.Log(TAG, "Error updating device");
-            MeshUtility.Log(TAG, "SQLException: " + ex.getMessage());
-            MeshUtility.Log(TAG, "SQLState: " + ex.getSQLState());
-            MeshUtility.Log(TAG, "VendorError: " + ex.getErrorCode());
-            MeshUtility.Log(TAG, "SQL: " + statement.toString());
+            Logger.log(TAG, "Error updating device");
+            Logger.log(TAG, "SQLException: " + ex.getMessage());
+            Logger.log(TAG, "SQLState: " + ex.getSQLState());
+            Logger.log(TAG, "VendorError: " + ex.getErrorCode());
+            Logger.log(TAG, "SQL: " + statement.toString());
         }
     }
 
@@ -235,14 +235,14 @@ public class DatabaseManager {
             if (rs.isBeforeFirst()) {
                 return true;
             }
-            MeshUtility.Log(TAG, "Finding link: source->" + sourceMeshId +
+            Logger.log(TAG, "Finding link: source->" + sourceMeshId +
                                     " target->" + targetMeshId);
         } catch (SQLException ex) {
-            MeshUtility.Log(TAG, "Error finding link");
-            MeshUtility.Log(TAG, "SQLException: " + ex.getMessage());
-            MeshUtility.Log(TAG, "SQLState: " + ex.getSQLState());
-            MeshUtility.Log(TAG, "VendorError: " + ex.getErrorCode());
-            MeshUtility.Log(TAG, "SQL: " + statement.toString());
+            Logger.log(TAG, "Error finding link");
+            Logger.log(TAG, "SQLException: " + ex.getMessage());
+            Logger.log(TAG, "SQLState: " + ex.getSQLState());
+            Logger.log(TAG, "VendorError: " + ex.getErrorCode());
+            Logger.log(TAG, "SQL: " + statement.toString());
         }
 
         return false;
@@ -268,13 +268,13 @@ public class DatabaseManager {
             statement.setString(1, sourceMeshId);
             statement.setString(2, targetMeshId);
             statement.executeUpdate();
-            MeshUtility.Log(TAG, "Adding link: " + sourceMeshId + ", " + targetMeshId);
+            Logger.log(TAG, "Adding link: " + sourceMeshId + ", " + targetMeshId);
         } catch (SQLException ex) {
-            MeshUtility.Log(TAG, "Error adding link");
-            MeshUtility.Log(TAG, "SQLException: " + ex.getMessage());
-            MeshUtility.Log(TAG, "SQLState: " + ex.getSQLState());
-            MeshUtility.Log(TAG, "VendorError: " + ex.getErrorCode());
-            MeshUtility.Log(TAG, "SQL: " + statement.toString());
+            Logger.log(TAG, "Error adding link");
+            Logger.log(TAG, "SQLException: " + ex.getMessage());
+            Logger.log(TAG, "SQLState: " + ex.getSQLState());
+            Logger.log(TAG, "VendorError: " + ex.getErrorCode());
+            Logger.log(TAG, "SQL: " + statement.toString());
         }
     }
 
@@ -299,13 +299,13 @@ public class DatabaseManager {
             statement.setString(1, sourceMeshId);
             statement.setString(2, targetMeshId);
             statement.executeUpdate();
-            MeshUtility.Log(TAG, "Updating link: " + sourceMeshId + ", " + targetMeshId);
+            Logger.log(TAG, "Updating link: " + sourceMeshId + ", " + targetMeshId);
         } catch (SQLException ex) {
-            MeshUtility.Log(TAG, "Error updating link");
-            MeshUtility.Log(TAG, "SQLException: " + ex.getMessage());
-            MeshUtility.Log(TAG, "SQLState: " + ex.getSQLState());
-            MeshUtility.Log(TAG, "VendorError: " + ex.getErrorCode());
-            MeshUtility.Log(TAG, "SQL: " + statement.toString());
+            Logger.log(TAG, "Error updating link");
+            Logger.log(TAG, "SQLException: " + ex.getMessage());
+            Logger.log(TAG, "SQLState: " + ex.getSQLState());
+            Logger.log(TAG, "VendorError: " + ex.getErrorCode());
+            Logger.log(TAG, "SQL: " + statement.toString());
         }
     }
 
@@ -352,13 +352,13 @@ public class DatabaseManager {
             statement.setString(1, sourceMeshId);
             statement.setString(2, targetMeshId);
             statement.executeUpdate();
-            MeshUtility.Log(TAG, "Deleting link: " + sourceMeshId + ", " + targetMeshId);
+            Logger.log(TAG, "Deleting link: " + sourceMeshId + ", " + targetMeshId);
         } catch (SQLException ex) {
-            MeshUtility.Log(TAG, "Error deleting link");
-            MeshUtility.Log(TAG, "SQLException: " + ex.getMessage());
-            MeshUtility.Log(TAG, "SQLState: " + ex.getSQLState());
-            MeshUtility.Log(TAG, "VendorError: " + ex.getErrorCode());
-            MeshUtility.Log(TAG, "SQL: " + statement.toString());
+            Logger.log(TAG, "Error deleting link");
+            Logger.log(TAG, "SQLException: " + ex.getMessage());
+            Logger.log(TAG, "SQLState: " + ex.getSQLState());
+            Logger.log(TAG, "VendorError: " + ex.getErrorCode());
+            Logger.log(TAG, "SQL: " + statement.toString());
         }
     }
 
@@ -394,13 +394,13 @@ public class DatabaseManager {
                 String tid = targetId.toString().substring(2);
                 deleteLink(conn, sid, tid);
             }
-            MeshUtility.Log(TAG, "Cleaning stale links");
+            Logger.log(TAG, "Cleaning stale links");
         } catch (SQLException ex) {
-            MeshUtility.Log(TAG, "Error finding stale link");
-            MeshUtility.Log(TAG, "SQLException: " + ex.getMessage());
-            MeshUtility.Log(TAG, "SQLState: " + ex.getSQLState());
-            MeshUtility.Log(TAG, "VendorError: " + ex.getErrorCode());
-            MeshUtility.Log(TAG, "SQL: " + statement.toString());
+            Logger.log(TAG, "Error finding stale link");
+            Logger.log(TAG, "SQLException: " + ex.getMessage());
+            Logger.log(TAG, "SQLState: " + ex.getSQLState());
+            Logger.log(TAG, "VendorError: " + ex.getErrorCode());
+            Logger.log(TAG, "SQL: " + statement.toString());
         }
     }
 
@@ -445,13 +445,13 @@ public class DatabaseManager {
                 String pid = peerId.toString().substring(2);
                 updateDevice(conn, pid, rs.getInt("role"), false);
             }
-            MeshUtility.Log(TAG, "Cleaning stale devices");
+            Logger.log(TAG, "Cleaning stale devices");
         } catch (SQLException ex) {
-            MeshUtility.Log(TAG, "Error finding stale device");
-            MeshUtility.Log(TAG, "SQLException: " + ex.getMessage());
-            MeshUtility.Log(TAG, "SQLState: " + ex.getSQLState());
-            MeshUtility.Log(TAG, "VendorError: " + ex.getErrorCode());
-            MeshUtility.Log(TAG, "SQL: " + statement.toString());
+            Logger.log(TAG, "Error finding stale device");
+            Logger.log(TAG, "SQLException: " + ex.getMessage());
+            Logger.log(TAG, "SQLState: " + ex.getSQLState());
+            Logger.log(TAG, "VendorError: " + ex.getErrorCode());
+            Logger.log(TAG, "SQL: " + statement.toString());
         }
     }
 
