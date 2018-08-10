@@ -118,6 +118,7 @@ public class Visualization implements PeerListener {
 
 				String targetId = target.toString().substring(2);
 				String nextHopId = nextHop.toString().substring(2);
+				conn = DatabaseManager.getConnection(DB_URL, USER, PASS);
 				DatabaseManager.addLink(conn, targetId, nextHopId);
 			}
 		}

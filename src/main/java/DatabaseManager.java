@@ -317,6 +317,7 @@ public class DatabaseManager {
      */
     public static void addLink(Connection conn, String targetId, String nextHopId)
     {
+        assert conn != null;
         if (conn != null) {
             if (!linkExists(conn, targetId, nextHopId)) {
                 insertLink(conn, targetId, nextHopId);
