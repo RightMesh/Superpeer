@@ -192,22 +192,22 @@ public class DatabaseManager {
      */
     public static void addPeer(Connection conn, String id, int role, boolean connected)
     {
-        if (conn != null) {
-            if (!deviceExists(conn, id)) {
-                //new node
-                addDevice(conn, id, role, connected);
-            } else {
-                //update node
-                updateDevice(conn, id, role, connected);
+        assert conn != null;
+
+        if (!deviceExists(conn, id)) {
+            //new node
+            addDevice(conn, id, role, connected);
+        } else {
+            //update node
+            updateDevice(conn, id, role, connected);
+        }
+        checkMaxNodes(conn);
+        try {
+            if (conn != null) {
+                conn.close();
             }
-            checkMaxNodes(conn);
-            try {
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
     }
 
@@ -318,19 +318,18 @@ public class DatabaseManager {
     public static void addLink(Connection conn, String targetId, String nextHopId)
     {
         assert conn != null;
-        if (conn != null) {
-            if (!linkExists(conn, targetId, nextHopId)) {
-                insertLink(conn, targetId, nextHopId);
-            } else {
-                updateLink(conn, targetId, nextHopId);
+
+        if (!linkExists(conn, targetId, nextHopId)) {
+            insertLink(conn, targetId, nextHopId);
+        } else {
+            updateLink(conn, targetId, nextHopId);
+        }
+        try {
+            if (conn != null) {
+                conn.close();
             }
-            try {
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
     }
 
@@ -463,25 +462,25 @@ public class DatabaseManager {
      */
     public static void addSuperpeerAndCleanup(Connection conn, String id)
     {
-        if (conn != null) {
-            if (deviceExists(conn, id)) {
-                updateDevice(conn, id, SUPERPEER.getNumber(), true);
+        assert conn != null;
 
-                //clean up unheard from devices
-                cleanupStaleDevices(conn);
+        if (deviceExists(conn, id)) {
+            updateDevice(conn, id, SUPERPEER.getNumber(), true);
 
-                //cleanup unheard from links
-                cleanupStaleLinks(conn);
-            } else {
-                addDevice(conn, id, SUPERPEER.getNumber(), true);
+            //clean up unheard from devices
+            cleanupStaleDevices(conn);
+
+            //cleanup unheard from links
+            cleanupStaleLinks(conn);
+        } else {
+            addDevice(conn, id, SUPERPEER.getNumber(), true);
+        }
+        try {
+            if (conn != null) {
+                conn.close();
             }
-            try {
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
     }
 
