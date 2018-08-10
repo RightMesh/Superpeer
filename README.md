@@ -10,7 +10,7 @@ If run without arguments Superpeer polls STDIN for input - typing `exit` will sh
 
 ## Connecting to your Superpeer
 
-By default RightMesh devices with internet connections will connect to a Superpeer operated by RightMesh at `research.rightmesh.io`. In the future the goal is to have a network of Superpeers, with Superpeers implemented and operated by both RightMesh and community members.
+By default RightMesh devices with internet connections will connect to a Superpeer operated by RightMesh at `superpeer1.rightmesh.io`. In the future the goal is to have a network of Superpeers, with Superpeers implemented and operated by both RightMesh and community members.
 
 If you would like to have devices use your Superpeer instance for testing, you can hard-code its address into a RightMesh application to make it use your instance instead of the mainnet. You can do this by passing the address as a parameter to a special MeshManager constructor that is available in the developer version of the library. Note that this will never be an option on the mainnet - all RightMesh applications will use the same network, so that the owner of the device can specify their preferences for where/when/how to connect to Superpeers.
 
