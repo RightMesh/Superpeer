@@ -40,7 +40,7 @@ public final class JSON {
     public static byte[] getErrorResponse(String resMethod, String message) {
         JSONObject response = new JSONObject();
         response.put("status", "error");
-        response.put("resMethod", resMethod);
+        response.put("method", resMethod);
         response.put("message", message);
 
         return response.toJSONString().getBytes();
