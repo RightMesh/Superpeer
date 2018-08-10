@@ -60,7 +60,7 @@ public class SuperPeer {
         // Start visualization
         String visualization = dotenv.get("VISUALIZATION");
         if (visualization != null && visualization.equals("1")) {
-            Visualization vis = new Visualization(dotenv);
+            Visualization vis = new Visualization(dotenv, mm);
         }
 
         // Stop everything when runtime is killed.
