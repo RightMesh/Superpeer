@@ -1,5 +1,6 @@
 package ether;
 
+import io.left.rightmesh.util.ConversionUtility;
 import io.left.rightmesh.util.EtherUtility;
 import io.left.rightmesh.util.MeshUtility;
 import org.ethereum.core.CallTransaction;
@@ -116,13 +117,13 @@ public class Settings {
                         tokenContract = new CallTransaction.Contract(tokenABI);
                         break;
                     case "maxDepositBits":
-                        maxDeposit = MeshUtility.decimalToBigInteger((String) jsonObject.get(key), appendingZerosForTKN);
+                        maxDeposit = ConversionUtility.decimalToBigInteger((String) jsonObject.get(key), appendingZerosForTKN);
                         if (debugInfo) {
                             System.out.println("MAX_DEPOSIT =" + maxDeposit.toString(10)); //16?
                         }
                         break;
                     case "initDeposit":
-                        initDeposit = MeshUtility.decimalToBigInteger((String) jsonObject.get(key), appendingZerosForTKN);
+                        initDeposit = ConversionUtility.decimalToBigInteger((String) jsonObject.get(key), appendingZerosForTKN);
                         if (debugInfo) {
                             System.out.println("INIT_DEPOSIT =" + initDeposit.toString(10));
                         }

@@ -28,8 +28,8 @@ public class Visualization implements PeerListener {
 	private String USER;
 	private String PASS;
 
-	public Visualization(Dotenv dotenv) {
-		jmm = new JavaMeshManager(true);
+	public Visualization(Dotenv dotenv, JavaMeshManager mm) {
+		jmm = mm;
 		jmm.registerAllPeerListener(this);
 		DB_URL = dotenv.get("DB_URL");
 		USER = dotenv.get("DB_USER");
@@ -118,6 +118,7 @@ public class Visualization implements PeerListener {
 
 				String targetId = target.toString().substring(2);
 				String nextHopId = nextHop.toString().substring(2);
+				conn = DatabaseManager.getConnection(DB_URL, USER, PASS);
 				DatabaseManager.addLink(conn, targetId, nextHopId);
 			}
 		}

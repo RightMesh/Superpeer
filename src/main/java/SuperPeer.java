@@ -1,6 +1,7 @@
 import ether.TransactionsManager;
 
 import io.left.rightmesh.mesh.JavaMeshManager;
+import io.left.rightmesh.util.Logger;
 import io.left.rightmesh.util.MeshUtility;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -39,8 +40,8 @@ public class SuperPeer {
                 .load();
         mm = new JavaMeshManager(true);
 
-        MeshUtility.Log(TAG, "Superpeer MeshID: " + mm.getUuid());
-        MeshUtility.Log(TAG, "Superpeer is waiting for library ... ");
+        Logger.log(TAG, "Superpeer MeshID: " + mm.getUuid());
+        Logger.log(TAG, "Superpeer is waiting for library ... ");
         try {
             Thread.sleep(200);
 
@@ -49,17 +50,17 @@ public class SuperPeer {
 
         tm = TransactionsManager.getInstance(mm);
         if (tm == null) {
-            MeshUtility.Log(TAG,"Failed to get TransactionManager from library. Superpeer is shutting down ...");
+            Logger.log(TAG,"Failed to get TransactionManager from library. Superpeer is shutting down ...");
             mm.stop();
             System.exit(0);
         }
         tm.start();
-        MeshUtility.Log(TAG, "Superpeer is ready!");
+        Logger.log(TAG, "Superpeer is ready!");
 
         // Start visualization
         String visualization = dotenv.get("VISUALIZATION");
         if (visualization != null && visualization.equals("1")) {
-            Visualization vis = new Visualization(dotenv);
+            Visualization vis = new Visualization(dotenv, mm);
         }
 
         // Stop everything when runtime is killed.
@@ -120,14 +121,14 @@ public class SuperPeer {
                 break;
 
             default:
-                MeshUtility.Log(TAG, "Invalid command.");
+                Logger.log(TAG, "Invalid command.");
                 break;
         }
     }
 
     private void processCloseCmd(String[] args) {
         if(args.length != 2) {
-            MeshUtility.Log(TAG, "Invalid args.");
+            Logger.log(TAG, "Invalid args.");
             return;
         }
 

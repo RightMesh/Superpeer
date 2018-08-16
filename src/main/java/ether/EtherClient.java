@@ -1,6 +1,7 @@
 package ether;
 
 import io.left.rightmesh.id.MeshId;
+import io.left.rightmesh.util.ConversionUtility;
 import io.left.rightmesh.util.EtherUtility;
 import io.left.rightmesh.util.MeshUtility;
 import org.apache.commons.codec.binary.Hex;
@@ -553,11 +554,11 @@ public final class EtherClient {
             return false;
         }
 
-        Transaction trans = new Transaction(MeshUtility.bigIntegerToBytes(recvNonce), // nonce
-                MeshUtility.bigIntegerToBytes(Settings.GAS_PRICE), // gas price
-                MeshUtility.bigIntegerToBytes(new BigInteger(estimateGasRes.substring(2), 16)), // gas limit
+        Transaction trans = new Transaction(ConversionUtility.bigIntegerToBytes(recvNonce), // nonce
+                ConversionUtility.bigIntegerToBytes(Settings.GAS_PRICE), // gas price
+                ConversionUtility.bigIntegerToBytes(new BigInteger(estimateGasRes.substring(2), 16)), // gas limit
                 ByteUtil.hexStringToBytes(Settings.CHANNEL_CONTRACT_ADDRESS), // to id
-                MeshUtility.bigIntegerToBytes(new BigInteger("0", 10)), // value
+                ConversionUtility.bigIntegerToBytes(new BigInteger("0", 10)), // value
                 funcBytes,
                 Settings.CHAIN_ID);// chainid
 
@@ -656,11 +657,11 @@ public final class EtherClient {
             return false;
         }
 
-        Transaction trans = new Transaction(MeshUtility.bigIntegerToBytes(senderNonce), // nonce
-                MeshUtility.bigIntegerToBytes(Settings.GAS_PRICE), // gas price
-                MeshUtility.bigIntegerToBytes(new BigInteger(estimateGasRes.substring(2), 16)), // gas limit
+        Transaction trans = new Transaction(ConversionUtility.bigIntegerToBytes(senderNonce), // nonce
+                ConversionUtility.bigIntegerToBytes(Settings.GAS_PRICE), // gas price
+                ConversionUtility.bigIntegerToBytes(new BigInteger(estimateGasRes.substring(2), 16)), // gas limit
                 ByteUtil.hexStringToBytes(Settings.CHANNEL_CONTRACT_ADDRESS), // to id
-                MeshUtility.bigIntegerToBytes(new BigInteger("0", 10)), // value
+                ConversionUtility.bigIntegerToBytes(new BigInteger("0", 10)), // value
                 funcBytes,
                 Settings.CHAIN_ID);// chainid
 
