@@ -55,13 +55,12 @@ dependencies {
     implementation 'org.apache.httpcomponents:httpclient:4.3.4'
     implementation 'com.google.guava:guava:23.0'
     implementation 'io.left.rightmesh:rightmesh-java-library-dev:0.9.0'
-    testCompile 'junit:junit:4.12'
-
     // https://mvnrepository.com/artifact/org.ethereum/ethereumj-core
-    api 'org.ethereum:ethereumj-core:1.4.5-RELEASE'
+    implementation 'org.ethereum:ethereumj-core:1.4.5-RELEASE'
+    implementation 'mysql:mysql-connector-java:5.1.13'
+    implementation 'io.github.cdimascio:java-dotenv:3.1.1'
 
-    api 'mysql:mysql-connector-java:5.1.13'
-    api 'io.github.cdimascio:java-dotenv:3.1.1'
+    testCompile 'junit:junit:4.12'
 }
 
 applicationDefaultJvmArgs = ["-noverify"]
