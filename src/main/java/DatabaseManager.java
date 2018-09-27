@@ -4,8 +4,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import io.github.cdimascio.dotenv.Dotenv;
-
 import io.left.rightmesh.id.MeshId;
 import io.left.rightmesh.util.Logger;
 
