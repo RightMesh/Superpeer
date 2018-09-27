@@ -1,8 +1,6 @@
 package ether;
 
 import io.left.rightmesh.util.ConversionUtility;
-import io.left.rightmesh.util.EtherUtility;
-import io.left.rightmesh.util.MeshUtility;
 import org.ethereum.core.CallTransaction;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;

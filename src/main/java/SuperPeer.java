@@ -2,7 +2,6 @@ import ether.TransactionsManager;
 
 import io.left.rightmesh.mesh.JavaMeshManager;
 import io.left.rightmesh.util.Logger;
-import io.left.rightmesh.util.MeshUtility;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
