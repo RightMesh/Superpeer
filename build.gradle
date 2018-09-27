@@ -28,15 +28,12 @@ buildscript {
 }
 
 plugins {
-    id 'java'
     id 'application'
 }
 
 apply plugin: 'io.left.rightmesh.rightmesh-plugin'
 
-
 build.dependsOn("rightmesh")
-
 
 
 repositories {
