@@ -58,10 +58,10 @@ dependencies {
     testCompile 'junit:junit:4.12'
 
     // https://mvnrepository.com/artifact/org.ethereum/ethereumj-core
-    implementation 'org.ethereum:ethereumj-core:1.4.5-RELEASE'
+    api 'org.ethereum:ethereumj-core:1.4.5-RELEASE'
 
-    compile 'mysql:mysql-connector-java:5.1.13'
-    compile 'io.github.cdimascio:java-dotenv:3.1.1'
+    api 'mysql:mysql-connector-java:5.1.13'
+    api 'io.github.cdimascio:java-dotenv:3.1.1'
 }
 
 applicationDefaultJvmArgs = ["-noverify"]
