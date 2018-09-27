@@ -35,7 +35,6 @@ apply plugin: 'io.left.rightmesh.rightmesh-plugin'
 
 build.dependsOn("rightmesh")
 
-
 repositories {
     mavenCentral()
     maven {
@@ -53,15 +52,15 @@ repositories {
 
 dependencies {
     // This dependency is found on compile classpath of this component and consumers.
-    implementation group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.3.4'
+    implementation 'org.apache.httpcomponents:httpclient:4.3.4'
     implementation 'com.google.guava:guava:23.0'
-    implementation ('io.left.rightmesh:rightmesh-java-library-dev:0.9.0')
+    implementation 'io.left.rightmesh:rightmesh-java-library-dev:0.9.0'
     testCompile 'junit:junit:4.12'
 
     // https://mvnrepository.com/artifact/org.ethereum/ethereumj-core
-    implementation (group: 'org.ethereum', name: 'ethereumj-core', version: '1.4.5-RELEASE')
+    implementation 'org.ethereum:ethereumj-core:1.4.5-RELEASE'
 
-    compile group: 'mysql', name: 'mysql-connector-java', version: '5.1.13'
+    compile 'mysql:mysql-connector-java:5.1.13'
     compile 'io.github.cdimascio:java-dotenv:3.1.1'
 }
 
