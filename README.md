@@ -4,7 +4,7 @@ This minimalist RightMesh "Superpeer" implementation provides two functionalitie
 
 ## Running the Superpeer
 
-Superpeer is a Gradle application - it can be built with `gradlew build`, and a binary can be generated with `gradlew installDist`.
+Superpeer is a Gradle application - it can be built with `gradlew build`, and a binary can be generated with `gradlew installDist`. The binary can be found in `build/install/Superpeer/bin`.
 
 If run without arguments Superpeer polls STDIN for input - typing `exit` will shut down RightMesh and stop the application. Unless you are developing/debugging, you will likely want to run Superpeer with the `-h | --headless` flag, which doesn't poll for input and responds to SIGINT signals (e.g. can be killed cleanly with `Ctrl+C` or task managers).
 
