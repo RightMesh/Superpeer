@@ -277,7 +277,7 @@ public final class TransactionsManager {
         EtherUtility.PaymentChannel inChannel = getChannelFromEtherNetwork(sourceId, ownMeshId);
 
         if (Settings.DEBUG_INFO) {
-            System.out.println("Client-->SuperPeer: " + inChannel == null ? "null" : inChannel);
+            System.out.println("Client-->SuperPeer: " + ((inChannel == null) ? "null" : inChannel));
         }
 
         if(inChannel == null) {

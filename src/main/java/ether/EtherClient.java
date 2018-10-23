@@ -1,6 +1,7 @@
 package ether;
 
 import io.left.rightmesh.id.MeshId;
+import io.left.rightmesh.util.ConversionUtility;
 import io.left.rightmesh.util.EtherUtility;
 import io.left.rightmesh.util.MeshUtility;
 import io.left.rightmesh.util.ConversionUtility;

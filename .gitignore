@@ -3,6 +3,12 @@
 .parity
 .parity-pass
 parity.log
+src/.env
+local.properties
+.classpath
+.project
+.settings/
+bin/
 
 #license
 src/main/assets/
