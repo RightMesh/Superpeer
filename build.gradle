@@ -1,38 +1,15 @@
-/*
- * Gradle build file for the RM Superpeer. Generated initially with
- * gradle 4.1 and the init command.
- * 
- * Uses a git plugin to checkout the Ethereum Parity Client vagrant
- * setup. Uses a plugin to execute the ethereum parity vagrant using
- * vagrant up. Parity client will be setup to listen on 
- * http://localhost:8545 so that the Superpeer can relay ethereum
- * remote signed transaction into it to be executed on the ethereum
- * blockchain. Should be configured to use either the Kovan testnet
- * or the public ethereum network.
- *
- * Requirements: git, vagrant 2.0.1 or higher, virtualbox
- * Note: if parity comes up correctly, you should be able to test it correctly
- * outside of the VM as follows: curl --data '{"method":"eth_accounts","params":[],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8545'
- * and you shouldn't get an error about connections.
- */
-//import com.bmuschko.gradle.vagrant.tasks.Vagrant
-//import com.bmuschko.gradle.vagrant.tasks.VagrantUp
-//import com.bmuschko.gradle.vagrant.tasks.VagrantSsh
-//import com.bmuschko.gradle.vagrant.tasks.VagrantDestroy
-
-// Apply the java plugin to add support for Java
-apply plugin: 'java'
-
-// Apply the application plugin to add support for building an application
-apply plugin: 'application'
-
-applicationDefaultJvmArgs = ["-noverify"]
 buildscript {
     ext {
-        //virtualBoxDir = file('build/parity')
-        artifactory_app_username = "username"
-        artifactory_app_password = "password"
-        artifactory_app_key = "app_key"
+        // define these variables in your personal ~/.gradle/gradle.properties
+        // for example:
+        /*
+            rightmesh_artifactory_username=<username>
+            rightmesh_artifactory_password=<hash of your developer portal password>
+            rightmesh_superpeer_key=<some key that you have access to>
+        */
+        artifactory_app_username = "${rightmesh_artifactory_username}"
+        artifactory_app_password = "${rightmesh_artifactory_password}"
+        artifactory_app_key = "${rightmesh_superpeer_key}"
     }
     repositories {
         mavenCentral()
@@ -40,24 +17,22 @@ buildscript {
         maven {
             url "https://research.rightmesh.io/artifactory/libs-local"
             credentials {
-                username artifactory_app_username
-                password artifactory_app_password
+                username rightmesh_artifactory_username
+                password rightmesh_artifactory_password
             }
-        }
-        maven {
-            //ansible plugin
-            url "https://plugins.gradle.org/m2/"
         }
     }
     dependencies {
         classpath 'io.left.rightmesh:rightmesh-plugin:1.6'
-        classpath 'com.palominolabs.gradle.task:gradle-git-clone-task:0.0.2'
-        classpath 'com.bmuschko:gradle-vagrant-plugin:2.1'
-        classpath "com.teslagov.gradle:gradle-ansible-plugin:0.0.2"
     }
 }
-apply plugin: "com.teslagov.gradle-ansible-plugin"
+
+plugins {
+    id 'application'
+}
+
 apply plugin: 'io.left.rightmesh.rightmesh-plugin'
+
 build.dependsOn("rightmesh")
 
 repositories {
@@ -69,74 +44,24 @@ repositories {
     maven {
         url "https://research.rightmesh.io/artifactory/libs-local"
         credentials {
-            username artifactory_app_username
-            password artifactory_app_password
+            username rightmesh_artifactory_username
+            password rightmesh_artifactory_password
         }
     }
 }
 
 dependencies {
-    // This dependency is found on compile classpath of this component and consumers.
-    implementation group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.3.4'
+    implementation 'org.apache.httpcomponents:httpclient:4.3.4'
     implementation 'com.google.guava:guava:23.0'
     implementation ('io.left.rightmesh:rightmesh-java-library:0.9.0')
-    // Use JUnit test framework
-    testCompile 'junit:junit:4.12'
 
     // https://mvnrepository.com/artifact/org.ethereum/ethereumj-core
-    implementation (group: 'org.ethereum', name: 'ethereumj-core', version: '1.4.5-RELEASE')
-    //compile 'org.ethereum:solcJ-all:0.4.10'
+    implementation 'org.ethereum:ethereumj-core:1.4.5-RELEASE'
+    implementation 'mysql:mysql-connector-java:5.1.13'
+    implementation 'io.github.cdimascio:java-dotenv:3.1.1'
+
+    testCompile 'junit:junit:4.12'
 }
 
-////Sets the repo we will pull the parity vagrant setup from. Also specifies
-////the commit hash, or remote branch with some like 'origin/master'
-//task cloneParity(type: com.palominolabs.gradle.task.git.clone.GitCloneTask) {
-//  dir = file("$buildDir/parity")
-//  uri = 'https://github.com/RightMesh/vagrant-eth-env.git'
-//  treeish = 'c1b27375a9c11a718bdaae7aad4769e5bdd19cc9'
-//}
-//
-//task cloneStatus {
-//    doLast {
-//        if (cloneParity.state.failure != null) {
-//            //here is what should be executed if cloneParity fails
-//            println 'Failed to use ssh to connect to gitlab. Setup your ssh key and test with `ssh -T git@github.com`. More instructions at https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account/'
-//        }
-//    }
-//}
-//
-//// creates and starts a parity VM
-//task startParity(type: VagrantUp) {
-//    description = 'Starts VM machine running on VirtualBox.'
-//    group = 'VirtualBox VM'
-//    boxDir = virtualBoxDir
-//}
-//
-//// stops and destroys the vagrant VM for parity
-//task destroyParity(type: VagrantDestroy ) {
-//    description = 'Destroys VM machine running on VirtualBox.'
-//    group = 'VirtualBox VM'
-//    boxDir = virtualBoxDir
-//}
-//
-//// will destory the old parity and attempt to create and start a new
-//// one - should be used if something totally borks up
-//task refreshParity {
-//    doFirst {
-//        destroyParity
-//    }
-//    finalizedBy {
-//        startParity
-//    }
-//}
-//
-//// Define the main class for the application
+applicationDefaultJvmArgs = ["-noverify"]
 mainClassName = 'SuperPeer'
-
-// only required for local builds where we want to run the parity
-// wallet in vagrant rather than directly on machine
-//cloneParity.finalizedBy cloneStatus
-//startParity.dependsOn(cloneParity)
-//destroyParity.dependsOn(cloneParity)
-
-//compileJava.dependsOn(startParity)
