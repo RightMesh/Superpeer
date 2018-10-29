@@ -55,8 +55,6 @@ dependencies {
     implementation 'org.apache.httpcomponents:httpclient:4.3.4'
     implementation 'com.google.guava:guava:23.0'
     implementation ('io.left.rightmesh:rightmesh-java-library:0.9.0')
-    // Use JUnit test framework
-    testCompile 'junit:junit:4.12'
 
     // https://mvnrepository.com/artifact/org.ethereum/ethereumj-core
     implementation 'org.ethereum:ethereumj-core:1.4.5-RELEASE'
