@@ -17,8 +17,8 @@ buildscript {
         maven {
             url "https://research.rightmesh.io/artifactory/libs-local"
             credentials {
-                username artifactory_app_username
-                password artifactory_app_password
+                username rightmesh_artifactory_username
+                password rightmesh_artifactory_password
             }
         }
     }
@@ -44,8 +44,8 @@ repositories {
     maven {
         url "https://research.rightmesh.io/artifactory/libs-local"
         credentials {
-            username artifactory_app_username
-            password artifactory_app_password
+            username rightmesh_artifactory_username
+            password rightmesh_artifactory_password
         }
     }
 }
